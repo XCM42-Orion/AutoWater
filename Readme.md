@@ -28,7 +28,10 @@ Autowater是由THU干（饭）主义协会自主研发的一款基于Napcat的�
 
 （2）新建Napcat Websocket服务端：端口3001，消息格式Array，强制推送时间，Token留空，心跳间隔5000，Host127.0.0.1，保存
 
-（3）运行AutoWater.py即可。
+（3）编辑AutoWater.py，在TARGET_GROUP里输入你要自动水群的群号，用英文逗号隔开
+
+（4）运行AutoWater.py即可。
+
 
 
 
