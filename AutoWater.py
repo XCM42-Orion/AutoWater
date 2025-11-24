@@ -4,7 +4,7 @@ import websockets
 import random
 
 NAPCAT_WS_URL = "ws://127.0.0.1:3001/"     # ← 改成你的 NapCat WS 地址
-TARGET_GROUP = []                  # ← 填你的目标群
+TARGET_GROUP = [519253540]                  # ← 填你的目标群
 REPLY_TEXT = ["喵",'太强了','饱饱','🈷️','和我做','强强！？','我是区','麦若，，，','妈妈','何意味','和一位','区，，，']      # ← 回复内容
 
 async def main():
@@ -23,9 +23,28 @@ async def main():
                 text = data.get("raw_message") or data.get("message")
 
                 if group_id in TARGET_GROUP:
+                    # 检查发送者昵称/名片，若为“喵喵喵”则优先回复“饱饱”。
+                    sender = data.get("sender", {}) or {}
+                    sender_name = sender.get("nickname") or sender.get("card") or data.get("sender_name") or ""
+
+                    if sender_name == "喵喵喵":
+                        payload = {
+                            "action": "send_group_msg",
+                            "params": {
+                                "group_id": group_id,
+                                "message": "饱饱"
+                            }
+                        }
+                        await ws.send(json.dumps(payload))
+                        print("收到事件：", data)
+                        print(f"检测到发送者为‘喵喵喵’，已向群 {group_id} 回复：饱饱")
+                        # 跳过后续随机回复，处理下一个收到的消息
+                        continue
+
+                    # 非特殊发送者：按原逻辑以一定概率随机回复
                     randomnum = random.random()
                     if randomnum <= 0.15: # 随机回复的概率是0.15，可以调
-                    # 构造 OneBot API 请求
+                        # 构造 OneBot API 请求
                         reply = random.choice(REPLY_TEXT)
                         payload = {
                             "action": "send_group_msg",
