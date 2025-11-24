@@ -1,4 +1,4 @@
-# **THU AutoWater Project 1.1.0**
+# **THU AutoWater Project 1.1.1**
 
 ## 让水群变得简单
 

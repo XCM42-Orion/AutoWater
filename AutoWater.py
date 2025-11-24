@@ -43,7 +43,7 @@ async def main():
                         randomnum = random.random()
                         if randomnum <= key_possi:
                             for x in KEYWORD_REPLY:
-                                if x in text:
+                                if x['keyword'] in text:
                                     reply = random.choice(x['reply'])
                                     payload = {
                                         "action": "send_group_msg",
