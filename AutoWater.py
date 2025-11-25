@@ -17,27 +17,53 @@ key_possi = config.get('keyword_possibility')
 set_possi = config.get("set_reply_possiblity")
 emo_possi = config.get("emoji_possibility")
 rand_possi = config.get("random_reply_possibility")
+repeat_possi = config.get("repeat_possibility")
+at_possi = config.get("at_possibility")
 
 
 async def main():
     async with websockets.connect(NAPCAT_WS_URL) as ws:
         print("已连接 NapCat WebSocket")
-
+        text = ""
+        repeat_num = 0
         while True:
             raw = await ws.recv()
             data = json.loads(raw)
-
+            text_last = text
             # -----------------------------
             # 只处理群消息
             # -----------------------------
             if data.get("post_type") == "message" and data.get("message_type") == "group":
                 group_id = data["group_id"]
-                text = data.get("raw_message") or data.get("message")
-                is_emoji = False
-                is_reply = False
-                is_keyword = False
                 if group_id in TARGET_GROUP:
+                    text = data.get("raw_message") or data.get("message")
+                    is_emoji = False
+                    is_reply = False
+                    is_keyword = False
+                    is_repeat = False
 
+                    # 复读
+                    if text == text_last:
+                        repeat_num += 1
+                        randomnum = random.random()
+                        if randomnum <= repeat_possi and repeat_num == 1:
+                            payload = {
+                                        "action": "send_group_msg",
+                                        "params": {
+                                            "group_id": group_id,
+                                            "message": text
+                                        }
+                                    }
+                            await asyncio.sleep(0.2)
+                            await ws.send(json.dumps(payload))
+                            print(f"收到复读消息:{text}")
+                            print(f"已向群 {group_id} 回复：{text}")
+                            is_repeat = True
+                    if is_repeat == True:
+                        continue
+                    if text != text_last:
+                        repeat_num = 0
+                            
                     # 关键词回复
                     if KEYWORD_REPLY:
                         randomnum = random.random()
@@ -52,7 +78,7 @@ async def main():
                                             "message": reply
                                         }
                                     }
-                                    await asyncio.sleep(len(reply))
+                                    await asyncio.sleep(len(reply)+len(text)*1.5)
                                     await ws.send(json.dumps(payload))
                                     print(f"收到关键词事件：{x['keyword']} in {text}",)
                                     print(f"已向群 {group_id} 回复：{reply}")
@@ -74,7 +100,7 @@ async def main():
                                                         {
                                                             "type": "reply",
                                                             "data": {
-                                                                "id": data['user_id']
+                                                                "id": data.get("message_id")
                                                             }
                                                         },
                                                         {
@@ -86,7 +112,7 @@ async def main():
                                                     ]
                                                 }
                                     }
-                                    await asyncio.sleep(len(x['reply']))
+                                    await asyncio.sleep(len(x['reply'])+len(text)*1.5)
                                     await ws.send(json.dumps(payload))
                                     print(f"已回复{data['user_id']}:{x['reply']}")
                                     is_reply = True
@@ -115,6 +141,35 @@ async def main():
                     if is_emoji == True:
                         continue
 
+                    # 随机艾特
+                    randomnum = random.random()
+                    if randomnum <= at_possi:
+                        payload = {
+                            "action": "send_group_msg",
+                            "params": {
+                                "group_id": group_id,
+                                "message": [
+                                    {
+                                        "type": "reply",
+                                        "data": {
+                                            "id": data.get("message_id")
+                                        }
+                                    },
+                                    {
+                                        "type":"at",
+                                        "data":{
+                                            "qq": str(data['user_id'])
+                                        }
+                                    }
+                                    ]
+                                    }
+                                    }
+                        await asyncio.sleep(3)
+                        await ws.send(json.dumps(payload))
+                        print(f"已随机艾特回复{data['user_id']}")
+                        
+
+
                     # 其他情况下的随机回复
                     randomnum = random.random()
                     if randomnum <= rand_possi: # 随机回复的概率是0.15，可以调s
@@ -127,7 +182,7 @@ async def main():
                                     "message": reply
                                 }
                             }
-                            await asyncio.sleep(len(reply))
+                            await asyncio.sleep(len(reply)+len(text)*1.5)
                             await ws.send(json.dumps(payload))
                             print("收到事件：", data)
                             print(f"已向群 {group_id} 回复：{reply}")
