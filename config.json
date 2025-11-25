@@ -23,10 +23,11 @@
             "reply":["这是一个检测到关键字之后的回复","可以输出这个","也可以输出这个","还可以输出这个"]
         }
     ],
-    "keyword_possibility": 0.3,
-    "set_reply_possiblity":0.3,
+    "keyword_possibility": 0.1,
+    "set_reply_possiblity":0.2,
     "emoji_possibility":0.5,
     "random_reply_possibility":0.05,
-    "napcat_url":"ws://127.0.0.1:3001/"
-
+    "napcat_url":"ws://127.0.0.1:3001/",
+    "repeat_possibility":0.5,
+    "at_possibility":0.02
 }
