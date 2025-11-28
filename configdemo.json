@@ -1,0 +1,43 @@
+{
+    "target_groups":[
+        123456789
+    ],
+    "random_reply":[
+        "喵","太强了","饱饱","🈷️","和我做","强强！？","我是区","麦若，，，","妈妈","何意味","和一位","区，，，"
+    ],
+    "set_reply":[
+        {
+            "id":123456789,
+            "reply":"这是一个示例回复"
+        }
+    ],
+    "set_emoji":[
+        {
+            "id":123456789,
+            "emoji_id":128051
+        }
+    ],
+    "keyword_reply":[
+        {
+            "keyword":"关键字",
+            "reply":["这是一个检测到关键字之后的回复","可以输出这个","也可以输出这个","还可以输出这个"]
+        }
+    ],
+    "time_reply":[
+        {
+            "time":"17:00:00",
+            "reply":"📢🎶🎶🎶\n📢同学们❗❗\n📢体育锻炼时间到了🏃🏻‍♀️🏃🏻‍♂️\n📢无体育❌不清华🌸\n📢让我们走出教室🏠走出宿舍🏠\n📢在体育锻炼中👊🏻保持强健🔥体魄💪🏻\n📢争取至少为祖国健康工作5⃣️0⃣️年❗\n📢🎶🎶🎶"
+        }
+    ],
+    "ated_reply":["？","何意味","何","被男娘艾特了"],
+    "keyword_possibility": 0.1,
+    "set_reply_possiblity":0.2,
+    "emoji_possibility":0.5,
+    "random_reply_possibility":0.05,
+    "napcat_url":"ws://127.0.0.1:3001/",
+    "repeat_possibility":0.5,
+    "at_possibility":0.02,
+    "ated_reply_possibility":0.3,
+    "poke_possibility":0.05,
+    "do_report":true
+}

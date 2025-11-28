@@ -2,6 +2,7 @@ import asyncio
 import json
 import websockets
 import random
+from datetime import datetime,time
 
 with open ("config.json","r",encoding='utf-8') as jsonload:
     config = json.load(jsonload)
@@ -13,17 +14,20 @@ SET_REPLY = config.get('set_reply')
 KEYWORD_REPLY = config.get('keyword_reply')
 KEYWORD_POSSI = config.get('keyword_possibility')             
 REPLY_TEXT = config.get('random_reply')      # ← 回复内容
+AT_REPLY = config.get('ated_reply')
+TIME_REPLY = config.get('time_reply')
 key_possi = config.get('keyword_possibility')
 set_possi = config.get("set_reply_possiblity")
 emo_possi = config.get("emoji_possibility")
 rand_possi = config.get("random_reply_possibility")
 repeat_possi = config.get("repeat_possibility")
 at_possi = config.get("at_possibility")
+ated_possi = config.get("ated_reply_possibility")
+poke_possi = config.get("poke_possibility")
+do_report = config.get("do_report")
 
 
-async def main():
-    async with websockets.connect(NAPCAT_WS_URL) as ws:
-        print("已连接 NapCat WebSocket")
+async def message(ws):
         text = ""
         repeat_num = 0
         while True:
@@ -37,7 +41,6 @@ async def main():
                 group_id = data["group_id"]
                 if group_id in TARGET_GROUP:
                     text = data.get("raw_message") or data.get("message")
-                    is_emoji = False
                     is_reply = False
                     is_keyword = False
                     is_repeat = False
@@ -63,7 +66,27 @@ async def main():
                         continue
                     if text != text_last:
                         repeat_num = 0
-                            
+
+                    # 被艾特回复
+                    msg = data.get("message", [])
+                    self_id = str(data.get("self_id"))
+
+                    if any(seg.get("type") == "at" and seg["data"].get("qq") == self_id for seg in msg):
+                        randomnum = random.random()
+                        if randomnum <= ated_possi:
+                            reply = random.choice(AT_REPLY)
+                            payload = {
+                                "action":"send_group_msg",
+                                "params":{
+                                    "group_id":group_id,
+                                    "message":reply
+                                }
+                            }
+                            await asyncio.sleep(len(reply)+1)
+                            await ws.send(json.dumps(payload))
+                            print(f"已被{data.get("user_id")}艾特并回复{reply}")
+                            continue
+
                     # 关键词回复
                     if KEYWORD_REPLY:
                         randomnum = random.random()
@@ -86,7 +109,7 @@ async def main():
                     if is_keyword == True:
                             continue                                    
 
-                    # 特殊人类的特殊回复(by Hikari)
+                    # 指定对象的特殊回复(by Hikari)
                     if SET_REPLY:
                         randomnum = random.random()
                         if randomnum <= set_possi:
@@ -136,10 +159,7 @@ async def main():
                                     await asyncio.sleep(3)
                                     await ws.send(json.dumps(payload))
                                     print(f"已给{data['user_id']}贴表情{x['emoji_id']}")
-                                    is_emoji = True
                                     break
-                    if is_emoji == True:
-                        continue
 
                     # 随机艾特
                     randomnum = random.random()
@@ -167,7 +187,20 @@ async def main():
                         await asyncio.sleep(3)
                         await ws.send(json.dumps(payload))
                         print(f"已随机艾特回复{data['user_id']}")
-                        
+                    
+                    # 戳一戳
+                    randomnum = random.random()
+                    if randomnum <= poke_possi:
+                        payload = { 
+                            "action": "send_poke",
+                            "params": {
+                                "user_id": data['user_id'],
+                                "group_id": group_id
+                            }
+                        }
+                        await asyncio.sleep(3)
+                        await ws.send(json.dumps(payload))
+                        print(f"已戳一戳{data['user_id']}")
 
 
                     # 其他情况下的随机回复
@@ -187,5 +220,30 @@ async def main():
                             print("收到事件：", data)
                             print(f"已向群 {group_id} 回复：{reply}")
 
+
+#自动播报
+
+async def report(ws):
+    if do_report:
+            while True:
+                now_time = datetime.now()
+                for data in TIME_REPLY:
+                    replytime = time.fromisoformat(data.get('time'))
+                    if replytime.hour == now_time.hour and replytime.minute == now_time.minute:
+                        for x in TARGET_GROUP:
+                            payload = {
+                                "action": "send_group_msg",
+                                "params":{
+                                    "group_id":x,
+                                    "message":data.get('reply')
+                                }
+                            }
+                            await ws.send(json.dumps(payload))
+                await asyncio.sleep(60)
+
+async def main():
+    async with websockets.connect(NAPCAT_WS_URL) as ws:
+        print("Napcat WebSocket 已连接")
+        await asyncio.gather(message(ws),report(ws))
 # 启动
 asyncio.run(main())
