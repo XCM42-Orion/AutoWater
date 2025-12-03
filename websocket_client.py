@@ -29,10 +29,5 @@ class WebSocketClient:
     async def _handle_messages(self, ws):
         """处理WebSocket消息"""
         async for message in ws:
-            try:
                 data = json.loads(message)
                 await self.message_handler.process_message(ws, data)
-            except json.JSONDecodeError:
-                print("JSON解析错误")
-            except Exception as e:
-                print(f"处理消息时出错: {e}")

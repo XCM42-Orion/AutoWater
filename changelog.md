@@ -99,3 +99,32 @@
 - Added: 增加了LLM回复分隔功能，默认分隔符是 `%n` 。可以在prompt里面让大模型用 `%n` 对句子进行分割，Autowater会分别将分割的结果输出。（by M42）
 
 - Changed: 重写代码逻辑，拆分了文件。（by Uint）
+
+## v1.5.0-Beta-1 - 2025/12/3
+
+**Noted: 本版本为预览版，可能出现一些错误和未知的Bug。更新到本版本前请备份好原来的版本。**
+
+### Added
+
+- 增加了预览版的心流（Heartflow）回复功能。可以在 `config.json` 当中配置心流相关参数 `heartflow_settings` 。可以配置如下参数：
+
+    - `do_heartflow` : 是否开启心流回复。
+    - `api_url` : 小参数模型API URL
+    - `api_key` : 小参数模型API key
+    - `model`: 小参数模型
+    - `background_message_number`: 判断是否回复时参考的消息数
+    - `temperature`: 小参数模型温度
+    - `willing_weight`: 回复意愿权重
+    - `context_weight`: 上下文参考权重
+    - `random_weight`: 随机权重
+    - `energy_recover_rate`: 精力回复速度（暂未启用）
+    - `reply_threshold`: 回复阈值
+
+    判断是否回复采用的是将小参数模型返回的回复意愿和上下文参考意愿分别乘以对应权重相加，再加上随机数乘随机权重。最后的结果如果大于回复阈值则输出回复。该机制是预览版的机制，以后会再进行更新。
+    注意三种权重之和应该为1，否则可能导致一些未知的bug。
+
+### Fixed
+
+- 修复了 `llm_service.py` 没有 `import json` 的bug。
+
+- 修复了其他一些已知bug。

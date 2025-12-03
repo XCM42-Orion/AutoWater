@@ -1,5 +1,6 @@
 import random
 from utils import calculate_send_delay, send_message, send_message_list
+from heartflow import HeartFlow
 
 class ActionHandler:
     def __init__(self, config):
@@ -130,14 +131,24 @@ class ActionHandler:
     
     async def handle_llm_reply(self, ws, llm_service, group_id, message_id, user_id, nickname, text, raw_message):
         """处理LLM回复"""
-        if random.random() <= self.config.llm_possibility:
-            reply_lines = await llm_service.call_llm(raw_message or text, user_id, nickname)
-            if not reply_lines:
+        reply_lines = []
+        if self.config.heartflow_do_heartflow:
+            heartflow = HeartFlow(self.config)
+            do_llm = await heartflow.should_reply(raw_message or text, user_id, nickname)
+            if not do_llm:
+                return False
+            else:
+                reply_lines = await llm_service.call_llm(raw_message or text, user_id, nickname)
+        else:
+            if random.random() <= self.config.llm_possibility:
+                reply_lines = await llm_service.call_llm(raw_message or text, user_id, nickname)
+        
+        if not reply_lines:
                 return False
             
-            send_list = []
-            for idx, line in enumerate(reply_lines):
-                if idx == 0:
+        send_list = []
+        for idx, line in enumerate(reply_lines):
+            if idx == 0:
                     payload = {
                         "action": "send_group_msg",
                         "params": {
@@ -159,7 +170,7 @@ class ActionHandler:
                         }
                     }
                     delay = calculate_send_delay(text, line)
-                else:
+            else:
                     payload = {
                         "action": "send_group_msg",
                         "params": {
@@ -169,11 +180,10 @@ class ActionHandler:
                     }
                     delay = len(line) * 0.3
                 
-                send_list.append({"delay": delay, "payload": payload})
+            send_list.append({"delay": delay, "payload": payload})
             
-            await send_message_list(ws, send_list)
-            return True
-        return False
+        await send_message_list(ws, send_list)
+        return True
     
     async def handle_random_reply(self, ws, group_id, text):
         """处理随机回复"""

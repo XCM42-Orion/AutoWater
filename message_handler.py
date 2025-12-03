@@ -7,6 +7,7 @@ class MessageHandler:
         self.config = config
         self.action_handler = ActionHandler(config)
         self.llm_service = LLMService(config)
+
     
     async def process_message(self, ws, data):
         """处理收到的消息"""

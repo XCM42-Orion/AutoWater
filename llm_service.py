@@ -60,6 +60,7 @@ class LLMService:
                     resp.raise_for_status()
                     result = await resp.json()
                     raw_str = result["choices"][0]["message"]["content"]
+                    print(f"LLM返回原始内容: {raw_str}")
                     return raw_str.split('%n')
         except Exception as e:
             print(f"LLM调用失败: {e}")
