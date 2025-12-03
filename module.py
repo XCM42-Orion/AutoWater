@@ -54,7 +54,7 @@ class AtReply(Module):
         """处理随机回复"""
         # 检查是否被艾特
         data = message.data
-        self_id = str(data.get("self_id"))
+        self_id = data.get("self_id")
         is_mentioned = False
         for component in message.get_components():
             if component.type == 'at' and component.data == self_id:
@@ -71,7 +71,7 @@ class AtReply(Module):
                     for idx, line in enumerate(reply_lines):
                         reply = ''
                         if idx == 0:
-                            reply = [("reply",message.message_id),("at",str(message.user_id))," " + line.strip()]
+                            reply = [("reply",message.message_id),("at",message.user_id)," " + line.strip()]
                         else:
                             reply = [" " + line.strip()]
                         
@@ -96,6 +96,7 @@ class Poke(Module):
         """处理戳一戳"""
         if random.random() <= config.poke_possibility:
             await message_handler.send_poke(message.user_id)
+            print("poke",message.user_id)
             return True
         return False
     
@@ -160,7 +161,7 @@ class RandomAt(Module):
         """处理随机艾特"""
         reply = ''
         if random.random() <= config.at_possibility:
-            reply = [("reply",message.message_id),("at",str(message.user_id))]
+            reply = [("reply",message.message_id),("at",message.user_id)]
             await message_handler.send_message(Message(reply))
             return True
         return False
