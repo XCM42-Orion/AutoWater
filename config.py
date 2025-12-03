@@ -40,3 +40,16 @@ class Config:
         self.llm_temperature = llm_settings.get("temperature", 1.0)
         self.llm_max_tokens = llm_settings.get("max_tokens", 100)
         self.llm_prompt = llm_settings.get("prompt", "")
+
+        # heartflow 配置
+        heartflow_settings = config.get("heartflow_settings", {})
+        self.heartflow_api_url = heartflow_settings.get("api_url")
+        self.heartflow_api_key = heartflow_settings.get("api_key")
+        self.heartflow_model = heartflow_settings.get("model")
+        self.heartflow_background_message_number = heartflow_settings.get("background_message_number", 15)
+        self.heartflow_temperature = heartflow_settings.get("temperature", 1.0)
+        self.heartflow_willing_weight = heartflow_settings.get("willing_weight", 0.3)
+        self.heartflow_context_weight = heartflow_settings.get("context_weight", 0.3)
+        self.heartflow_random_weight = heartflow_settings.get("random_weight", 0.1)
+        self.heartflow_reply_threshold = heartflow_settings.get("reply_threshold", 0.5)
+        self.heartflow_do_heartflow = heartflow_settings.get("do_heartflow", False)

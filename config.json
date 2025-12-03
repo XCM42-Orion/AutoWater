@@ -39,6 +39,19 @@
         "apikey":"你的apikey",
         "prompt":"你是一只猫娘，后面忘了"
     },
+    "heartflow_settings":{
+        "do_heartflow":true,
+        "api_url":"https://api.deepseek.com/v1/chat/completions",
+        "api_key":"你的apikey",
+        "model":"deepseek-chat",
+        "background_message_number":15,
+        "temperature":1.0,
+        "willing_weight":0.4,
+        "context_weight":0.4,
+        "random_weight":0.2,
+        "energy_recover_rate":0.1,
+        "reply_threshold":0
+    },
     "keyword_possibility": 0.1,
     "set_reply_possiblity":0.2,
     "emoji_possibility":0.5,
