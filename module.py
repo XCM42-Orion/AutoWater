@@ -19,12 +19,12 @@ class ModuleManager:
 class Repeat(Module):
     async def on_recv_msg(self, message_handler, message, config):
         """处理复读"""
-        if message.text == self.last_message:
+        if str(message) == self.last_message:
             self.repeat_count += 1
             if random.random() <= config.repeat_possibility and self.repeat_count == 1:
                 return await message_handler.send_message(Message(message))
         else:
-            self.last_message = message.text
+            self.last_message = str(message)
             self.repeat_count = 0
         
         return False
@@ -55,52 +55,27 @@ class AtReply(Module):
         # 检查是否被艾特
         data = message.data
         self_id = str(data.get("self_id"))
-        is_mentioned = any(
-            seg.get("type") == "at" and seg["data"].get("qq") == self_id 
-            for seg in data.get("message", [])
-        )
-        
+        is_mentioned = False
+        for component in message.get_components():
+            if component.type == 'at' and component.data == self_id:
+                is_mentioned = True
         # 处理被艾特回复
         if is_mentioned:
             if random.random() > config.ated_reply_possibility:
                 return False
         
             if random.random() <= config.llm_possibility and config.llm_url:
-                reply_lines = await message_handler.llm_service.call_llm(message.raw_message or message.text, message.user_id, None)
+                reply_lines = await message_handler.llm_service.call_llm(str(message), message.user_id, None)
                 if reply_lines:
                     send_list = []
                     for idx, line in enumerate(reply_lines):
+                        reply = ''
                         if idx == 0:
-                            payload = {
-                                "action": "send_group_msg",
-                                "params": {
-                                    "group_id": message_handler.group_id,
-                                    "message": [
-                                        {
-                                            "type": "reply",
-                                            "data": {"id": message.message_id}
-                                        },
-                                        {
-                                            "type": "at",
-                                            "data": {"qq": str(message.user_id)}
-                                        },
-                                        {
-                                            "type": "text",
-                                            "data": {"text": " " + line.strip()}
-                                        }
-                                    ]
-                                }
-                            }
+                            reply = [("reply",message.message_id),("at",str(message.user_id))," " + line.strip()]
                         else:
-                            payload = {
-                                "action": "send_group_msg",
-                                "params": {
-                                    "group_id": message_handler.group_id,
-                                    "message": line.strip()
-                                }
-                            }
+                            reply = [" " + line.strip()]
                         
-                        send_list.append(Message(payload))
+                        send_list.append(Message(reply))
                     
                     await message_handler.send_message_list(send_list)
                     return True
@@ -137,7 +112,7 @@ class KeywordReply(Module):
             return False
         
         for keyword_item in config.keyword_reply:
-            if keyword_item['keyword'] in message.text:
+            if keyword_item['keyword'] in str(message):
                 await message_handler.send_message(Message(random.choice(keyword_item['reply'])))
                 return True
         return False
@@ -152,24 +127,10 @@ class SpecialReply(Module):
             return False
         
         for special_user in config.set_reply:
+            reply = ''
             if message.user_id == special_user['id']:
-                payload = {
-                    "action": "send_group_msg",
-                    "params": {
-                        "group_id": message_handler.group_id,
-                        "message": [
-                            {
-                                "type": "reply",
-                                "data": {"id": message.message_id}
-                            },
-                            {
-                                "type": "text",
-                                "data": {"text": special_user['reply']}
-                            }
-                        ]
-                    }
-                }
-                await message_handler.send_message(Message(payload))
+                reply = [('reply',message.message_id),special_user['reply']]
+                await message_handler.send_message(Message(reply))
                 return True
         return False
     
@@ -197,24 +158,10 @@ class Emoji(Module):
 class RandomAt(Module):
     async def on_recv_msg(self, message_handler, message, config):
         """处理随机艾特"""
+        reply = ''
         if random.random() <= config.at_possibility:
-            payload = {
-                "action": "send_group_msg",
-                "params": {
-                    "group_id": message_handler.group_id,
-                    "message": [
-                        {
-                            "type": "reply",
-                            "data": {"id": message.message_id}
-                        },
-                        {
-                            "type": "at",
-                            "data": {"qq": str(message.user_id)}
-                        }
-                    ]
-                }
-            }
-            await message_handler.send_message(Message(payload))
+            reply = [("reply",message.message_id),("at",str(message.user_id))]
+            await message_handler.send_message(Message(reply))
             return True
         return False
     
@@ -227,51 +174,26 @@ class LLMReply(Module):
         reply_lines = []
         if config.heartflow_do_heartflow:
             heartflow = HeartFlow(config)
-            do_llm = await heartflow.should_reply(message.raw_message or message.text, message.user_id, message.nickname)
+            do_llm = await heartflow.should_reply(str(message), message.user_id, message.nickname)
             if not do_llm:
                 return False
             else:
-                reply_lines = await message_handler.llm_service.call_llm(message.raw_message or message.text, message.user_id, message.nickname)
+                reply_lines = await message_handler.llm_service.call_llm(str(message), message.user_id, message.nickname)
         else:
             if random.random() <= config.llm_possibility:
-                reply_lines = await message_handler.llm_service.call_llm(message.raw_message or message.text, message.user_id, message.nickname)
+                reply_lines = await message_handler.llm_service.call_llm(str(message), message.user_id, message.nickname)
         
         if not reply_lines:
                 return False
             
         send_list = []
+        reply = ''
         for idx, line in enumerate(reply_lines):
             if idx == 0:
-                    payload = {
-                        "action": "send_group_msg",
-                        "params": {
-                            "group_id": message_handler.group_id,
-                            "message": [
-                                {
-                                    "type": "reply",
-                                    "data": {"id": message.message_id}
-                                },
-                                {
-                                    "type": "at",
-                                    "data": {"qq": str(message.user_id)}
-                                },
-                                {
-                                    "type": "text",
-                                    "data": {"text": " " + line.strip()}
-                                }
-                            ]
-                        }
-                    }
+                reply = [('reply',message.message_id),('at',str(message.user_id))," " + line.strip()]
             else:
-                    payload = {
-                        "action": "send_group_msg",
-                        "params": {
-                            "group_id": message_handler.group_id,
-                            "message": line.strip()
-                        }
-                    }
-                
-            send_list.append(Message(payload))
+                reply = [line.strip()]
+            send_list.append(Message(reply))
         await message_handler.send_message_list(send_list)
         return True
     def register(self, message_handler):
