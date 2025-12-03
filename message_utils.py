@@ -21,8 +21,6 @@ class MessageComponent:
             if isinstance(args[0],tuple):
                 self.type = args[0][0]
                 self.data = args[0][1]
-                if self.type == 'at':
-                    self.data = str(self.data)
             if isinstance(args[0],str):
                 self.type = 'text'
                 self.data = args[0]
@@ -69,9 +67,9 @@ class Message:
                 self.content = [MessageComponent('text', args[0])]
 
 
-                self.user_id = str(-1)
+                self.user_id = -1
                 self.nickname = 'system'
-                self.message_id = str(Message.inner_count)
+                self.message_id = Message.inner_count
                 Message.inner_count -= 1
 
                 self.update_payload()
@@ -93,8 +91,8 @@ class Message:
                 self.content = []
                 self.payload = args[0]
 
-                self.user_id = str(-1)
-                self.message_id = str(Message.inner_count)
+                self.user_id = -1
+                self.message_id = Message.inner_count
                 Message.inner_count -= 1
                 self.nickname = 'system'
 
@@ -110,7 +108,7 @@ class Message:
                 self.update_payload()
 
                 self.user_id = -1
-                self.message_id = str(Message.inner_count)
+                self.message_id = Message.inner_count
                 Message.inner_count -= 1
                 self.nickname = 'system'
 
@@ -135,7 +133,7 @@ class Message:
         elif len(args) == 4:
             user_id, message_id, nickname, data = args
 
-            self.user_id = str(user_id)
+            self.user_id = user_id
             self.message_id = message_id
             self.nickname = nickname
 
@@ -217,6 +215,7 @@ class MessageHandler:
             await self.websocket.send(json.dumps(message.payload))
         elif isinstance(text, Message):
             message = text
+            print(message.payload)
             if not message.has_group_id:
                 message.payload["params"]["group_id"] = self.group_id
             await self.websocket.send(json.dumps(message.payload))
@@ -265,12 +264,12 @@ class MessageHandler:
         # 提取消息内容
         #text = "".join(seg["data"]["text"] for seg in data["message"] if seg["type"] == "text")
         user_id = data["user_id"]
-        message_id = str(data.get("message_id"))
+        message_id = data.get("message_id")
         nickname = data["sender"]["card"] or data["sender"]["nickname"]
 
         message = Message(user_id, message_id, nickname, data)
         data["message"]
-        self.messages[str(message_id)] = message
+        self.messages[message_id] = message
 
         # 添加到历史记录
         self.llm_service.add_message_to_history(user_id, nickname, str(message))
