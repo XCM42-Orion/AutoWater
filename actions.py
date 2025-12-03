@@ -1,5 +1,5 @@
-import random
-from utils import calculate_send_delay, send_message, send_message_list
+'''import random
+from utils import calculate_send_delay
 from heartflow import HeartFlow
 
 class ActionHandler:
@@ -8,7 +8,7 @@ class ActionHandler:
         self.last_message = ''
         self.repeat_count = 0
     
-    async def handle_repeat(self, ws, group_id, text):
+    async def handle_repeat(self, message_handler, ws, group_id, text):
         """处理复读"""
         if text == self.last_message:
             self.repeat_count += 1
@@ -20,13 +20,13 @@ class ActionHandler:
                         "message": text
                     }
                 }
-                return await send_message(ws, 0.2, payload)
+                return await message_handler.send_message(ws, 0.2, payload)
         else:
             self.last_message = text
             self.repeat_count = 0
         return False
     
-    async def handle_keyword_reply(self, ws, group_id, text):
+    async def handle_keyword_reply(self, message_handler, ws, group_id, text):
         """处理关键词回复"""
         if not self.config.keyword_reply or random.random() > self.config.keyword_possibility:
             return False
@@ -42,11 +42,11 @@ class ActionHandler:
                     }
                 }
                 delay = calculate_send_delay(text, reply)
-                await send_message(ws, delay, payload)
+                await message_handler.send_message(ws, delay, payload)
                 return True
         return False
     
-    async def handle_special_reply(self, ws, group_id, user_id, message_id, text):
+    async def handle_special_reply(self, message_handler, ws, group_id, user_id, message_id, text):
         """处理特殊用户回复"""
         if not self.config.set_reply or random.random() > self.config.set_reply_possiblity:
             return False
@@ -70,11 +70,11 @@ class ActionHandler:
                     }
                 }
                 delay = calculate_send_delay(text, special_user['reply'])
-                await send_message(ws, delay, payload)
+                await message_handler.send_message(ws, delay, payload)
                 return True
         return False
     
-    async def handle_emoji(self, ws, user_id, message_id):
+    async def handle_emoji(self, message_handler, ws, user_id, message_id):
         """处理贴表情"""
         if not self.config.set_emoji or random.random() > self.config.emoji_possibility:
             return False
@@ -88,11 +88,11 @@ class ActionHandler:
                         "emoji_id": emoji_user['emoji_id']
                     }
                 }
-                await send_message(ws, 3, payload)
+                await message_handler.send_message(ws, 3, payload)
                 return True
         return False
     
-    async def handle_random_at(self, ws, group_id, user_id, message_id):
+    async def handle_random_at(self, message_handler, ws, group_id, user_id, message_id):
         """处理随机艾特"""
         if random.random() <= self.config.at_possibility:
             payload = {
@@ -111,11 +111,11 @@ class ActionHandler:
                     ]
                 }
             }
-            await send_message(ws, 3, payload)
+            await message_handler.send_message(ws, 3, payload)
             return True
         return False
     
-    async def handle_poke(self, ws, group_id, user_id):
+    async def handle_poke(self, message_handler, ws, group_id, user_id):
         """处理戳一戳"""
         if random.random() <= self.config.poke_possibility:
             payload = {
@@ -125,11 +125,11 @@ class ActionHandler:
                     "group_id": group_id
                 }
             }
-            await send_message(ws, 3, payload)
+            await message_handler.send_message(ws, 3, payload)
             return True
         return False
     
-    async def handle_llm_reply(self, ws, llm_service, group_id, message_id, user_id, nickname, text, raw_message):
+    async def handle_llm_reply(self, message_handler, ws, llm_service, group_id, message_id, user_id, nickname, text, raw_message):
         """处理LLM回复"""
         reply_lines = []
         if self.config.heartflow_do_heartflow:
@@ -182,10 +182,10 @@ class ActionHandler:
                 
             send_list.append({"delay": delay, "payload": payload})
             
-        await send_message_list(ws, send_list)
+        await message_handler.send_message_list(ws, send_list)
         return True
     
-    async def handle_random_reply(self, ws, group_id, text):
+    async def handle_random_reply(self, message_handler, ws, group_id, text):
         """处理随机回复"""
         if not self.config.random_reply or random.random() > self.config.random_reply_possibility:
             return False
@@ -199,10 +199,10 @@ class ActionHandler:
             }
         }
         delay = calculate_send_delay(text, reply)
-        await send_message(ws, delay, payload)
+        await message_handler.send_message(ws, delay, payload)
         return True
     
-    async def handle_mentioned_reply(self, ws, llm_service, group_id, message_id, user_id, raw_message, text):
+    async def handle_mentioned_reply(self, message_handler, ws, llm_service, group_id, message_id, user_id, raw_message, text):
         """处理被艾特回复"""
         if random.random() > self.config.ated_reply_possibility:
             return False
@@ -246,7 +246,7 @@ class ActionHandler:
                     
                     send_list.append({"delay": delay, "payload": payload})
                 
-                await send_message_list(ws, send_list)
+                await message_handler.send_message_list(ws, send_list)
                 return True
         
         # 使用预定义的回复
@@ -260,7 +260,9 @@ class ActionHandler:
                 }
             }
             delay = len(reply) * 0.3 + 1
-            await send_message(ws, delay, payload)
+            await message_handler.send_message(ws, delay, payload)
             return True
         
-        return False
+        return False'''
+
+### deprecated!!
