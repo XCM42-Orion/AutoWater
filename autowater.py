@@ -2,6 +2,7 @@ import asyncio
 from config import Config
 from websocket_client import WebSocketClient
 
+
 async def main():
     # 加载配置
     config = Config("config.json")

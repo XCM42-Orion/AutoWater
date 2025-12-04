@@ -96,10 +96,10 @@ class Poke(Module):
         """处理戳一戳"""
         if random.random() <= config.poke_possibility:
             await message_handler.send_poke(message.user_id)
-            print("poke",message.user_id)
+            print("已戳一戳",message.user_id)
             return True
         return False
-    
+        
     def register(self, message_handler):
         message_handler.register_listener(EventType.EVENT_RECV_MSG, self.on_recv_msg)
 ##################
@@ -169,7 +169,9 @@ class RandomAt(Module):
     def register(self, message_handler):
         message_handler.register_listener(EventType.EVENT_RECV_MSG, self.on_recv_msg)
 
+
 from heartflow import HeartFlow
+
 class LLMReply(Module):
     async def on_recv_msg(self, message_handler, message, config):
         reply_lines = []
