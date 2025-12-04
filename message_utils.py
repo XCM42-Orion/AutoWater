@@ -3,6 +3,8 @@ import json
 from llm_service import LLMService
 from enum import Enum
 import asyncio
+from collections.abc import Iterable
+import random
 
 class EventType(Enum):
     EVENT_INIT = 0
@@ -179,7 +181,7 @@ class MessageHandler:
         self.llm_service = LLMService(config)
         self.listeners = {}
         self.websocket = websocket
-        self.group_id = self.config.target_groups[0]#临时代码
+        self.group_ids = self.config.target_groups
         self.self_id = str()
         self.messages = dict()
 
@@ -191,30 +193,44 @@ class MessageHandler:
                  for l in self.listeners.get(event_type,[])]
         await asyncio.gather(*(t for t in tasks if t))
 
-
-    async def send_message(self, text):
+    async def send_message_single_group(self, text:str|Message, group_id: str|int):
         """发送消息到WebSocket"""
-        #await asyncio.sleep(delay)
         if isinstance(text, str):       #判断消息是text还是Message。所以这两种类型都可以发送。
             message = Message(text)
-            message.payload["params"]["group_id"] = self.group_id
+            message.payload["params"]["group_id"] = group_id
             await self.websocket.send(json.dumps(message.payload))
         elif isinstance(text, Message):
             message = text
             print(message.payload)
             if not message.has_group_id:
-                message.payload["params"]["group_id"] = self.group_id
+                message.payload["params"]["group_id"] = group_id
             await self.websocket.send(json.dumps(message.payload))
 
-    async def send_poke(self, user_id):
+    async def send_message_groups(self, text:str|Message, group_ids: Iterable):
+        message_tasks=[ asyncio.create_task(self.send_message_single_group(text,group_id)) for group_id in group_ids]
+        await asyncio.gather(*message_tasks)
+
+    async def send_message(self, text:str|Message, group_id:None|int|str|Iterable=None):
+        #处理多种group_id格式
+        if group_id is None:
+            await self.send_message_groups(text,self.group_ids)
+        elif isinstance(group_id, Iterable):
+            await self.send_message_groups(text,group_id)
+        else:
+            await self.send_message_single_group(text,group_id)
+
+        
+
+    async def send_poke(self, user_id, group_id:None|int|str|Iterable=None):
+        if group_id is None:
+            group_id=random.choice(self.group_ids)
         payload = {
                 "action": "send_poke",
                 "params": {
                     "user_id": user_id,
-                    "group_id": self.group_id
                 }
             }
-        await self.send_message(Message(payload))
+        await self.send_message(Message(payload),group_id)
 
     async def send_emoji_like(self, message_id, emoji_id):
         payload = {
@@ -226,10 +242,10 @@ class MessageHandler:
                 }
         await self.send_message(Message(payload))
 
-    async def send_message_list(self, send_list):
+    async def send_message_list(self, send_list, group_id:None|int|str|Iterable=None):
         """发送消息列表"""
         for send_item in send_list:
-            await self.send_message(Message(send_item))
+            await self.send_message(Message(send_item),group_id)
 
     def set_websocket(self, websocket):
         self.websocket = websocket
@@ -239,7 +255,7 @@ class MessageHandler:
 
         if (data.get("post_type") == "message" and data.get("message_type") == "group") or data.get("post_type") == "notice":       
             group_id = data.get("group_id")
-            if group_id not in self.config.target_groups:
+            if group_id not in self.group_ids:
                 return
             
             self.self_id = str(data.get("self_id"))
