@@ -8,6 +8,7 @@ class EventType(Enum):
     EVENT_INIT = 0
     EVENT_RECV_MSG = 1
     EVENT_PRE_SEND_MSG = 2
+    EVENT_NOTICE_MSG = 3
 
 class MessageComponent:
     def __init__(self, *args):
@@ -41,6 +42,9 @@ class MessageComponent:
             return '@' + str(self.data)
             
 
+
+#定义消息对象
+
 class Message:
     inner_count = 0
     def __init__(self, *args):
@@ -63,7 +67,7 @@ class Message:
             #id计数器--
             Message.inner_count -= 1
         elif len(args) == 1:
-            if isinstance(args[0], str):
+            if isinstance(args[0], str):  #传入纯文本初始化
                 self.content = [MessageComponent('text', args[0])]
 
 
@@ -76,7 +80,7 @@ class Message:
 
                 self.data = None
                 self.has_group_id = False
-            elif isinstance(args[0], Message):
+            elif isinstance(args[0], Message): #传入Message对象初始化（复制构造）
                 self.content = args[0].content
 
                 self.user_id = args[0].user_id
@@ -114,23 +118,8 @@ class Message:
 
                 self.data = None
                 self.has_group_id = False
-            '''elif isinstance(args[0], list):
-                self.text = ''
-                self.content = []
-                for component in args[0]:
-                    self.content.append(MessageComponent(component))
-                self.content = args[0]
-
-                self.update_payload()
-
-                self.user_id = -1
-                self.message_id = Message.inner_count
-                Message.inner_count -= 1
-                self.nickname = 'system'
-
-                self.data = None'''
         
-        elif len(args) == 4:
+        elif len(args) == 4: #传入完整消息数据初始化
             user_id, message_id, nickname, data = args
 
             self.user_id = user_id
@@ -171,13 +160,14 @@ class Message:
 
 
     def parse_message(self):
-        for raw_component in self.data["message"]:
-            if raw_component['type'] == 'text':
-                self.content.append(MessageComponent('text',raw_component['data']['text']))
-            elif raw_component['type'] == 'at':
-                self.content.append(MessageComponent('at',raw_component['data']['qq']))
-            elif raw_component['type'] == 'reply':
-                self.content.append(MessageComponent('at',raw_component['data']['id']))
+        if self.data.get("message"):
+            for raw_component in self.data["message"]:
+                if raw_component['type'] == 'text':
+                    self.content.append(MessageComponent('text',raw_component['data']['text']))
+                elif raw_component['type'] == 'at':
+                    self.content.append(MessageComponent('at',raw_component['data']['qq']))
+                elif raw_component['type'] == 'reply':
+                    self.content.append(MessageComponent('at',raw_component['data']['id']))
 
     
     
@@ -201,15 +191,11 @@ class MessageHandler:
                  for l in self.listeners.get(event_type,[])]
         await asyncio.gather(*(t for t in tasks if t))
 
-    '''async def send_message(self, ws, delay, payload):
-        """发送消息到WebSocket"""
-        await asyncio.sleep(delay)
-        await self.websocket.send(json.dumps(payload))'''
 
     async def send_message(self, text):
         """发送消息到WebSocket"""
         #await asyncio.sleep(delay)
-        if isinstance(text, str):
+        if isinstance(text, str):       #判断消息是text还是Message。所以这两种类型都可以发送。
             message = Message(text)
             message.payload["params"]["group_id"] = self.group_id
             await self.websocket.send(json.dumps(message.payload))
@@ -251,63 +237,33 @@ class MessageHandler:
     async def process_message(self, data):
         """处理收到的消息"""
 
-        if data.get("post_type") != "message" or data.get("message_type") != "group":
-            return
-        
-        group_id = data["group_id"]
-        if group_id not in self.config.target_groups:
-            return
-        
+        if (data.get("post_type") == "message" and data.get("message_type") == "group") or data.get("post_type") == "notice":       
+            group_id = data.get("group_id")
+            if group_id not in self.config.target_groups:
+                return
+            
+            self.self_id = str(data.get("self_id"))
+                
+            # 提取消息内容
+            #text = "".join(seg["data"]["text"] for seg in data["message"] if seg["type"] == "text")
+            user_id = data["user_id"]
+            message_id = data.get("message_id")
+            if data.get("sender") is None:
+                nickname = ""
+            else:
+                nickname = data["sender"]["card"] or data["sender"]["nickname"]
 
-        self.self_id = str(data.get("self_id"))
-        
-        # 提取消息内容
-        #text = "".join(seg["data"]["text"] for seg in data["message"] if seg["type"] == "text")
-        user_id = data["user_id"]
-        message_id = data.get("message_id")
-        nickname = data["sender"]["card"] or data["sender"]["nickname"]
+            message = Message(user_id, message_id, nickname, data)
+            self.messages[message_id] = message
 
-        message = Message(user_id, message_id, nickname, data)
-        data["message"]
-        self.messages[message_id] = message
-
-        # 添加到历史记录
-        self.llm_service.add_message_to_history(user_id, nickname, str(message))
-
-        
-        
-        '''
-        # 处理复读
-        if await self.action_handler.handle_repeat(self, ws, group_id, raw_message):
+            # 事件广播
+            if data.get("post_type") == "message":
+                # 添加到历史记录
+                self.llm_service.add_message_to_history(user_id, nickname, str(message))
+                await self.dispatch_event(EventType.EVENT_RECV_MSG, message)
+                print(f"{nickname}({user_id})：{message}")
+            else:
+                await self.dispatch_event(EventType.EVENT_NOTICE_MSG, message)
+        else:
             return
-        
-        # 处理关键词回复
-        if await self.action_handler.handle_keyword_reply(self, ws, group_id, text):
-            return
-        
-        # 处理特殊用户回复
-        if await self.action_handler.handle_special_reply(self, ws, group_id, user_id, message_id, text):
-            return
-        
-        # 处理贴表情
-        await self.action_handler.handle_emoji(self, ws, user_id, message_id)
-        
-        # 处理随机艾特
-        await self.action_handler.handle_random_at(self, ws, group_id, user_id, message_id)
-        
-        # 处理戳一戳
-        await self.action_handler.handle_poke(self, ws, group_id, user_id)
-        
-        # 处理LLM回复
-        if await self.action_handler.handle_llm_reply(
-            self, ws, self.llm_service, group_id, message_id, user_id, nickname, text, raw_message
-        ):
-            return
-        
-        # 处理随机回复
-        await self.action_handler.handle_random_reply(self, ws, group_id, text)'''
 
-        # 事件广播
-        await self.dispatch_event(EventType.EVENT_RECV_MSG, message)
-
-        print(message)

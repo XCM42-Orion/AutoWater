@@ -134,4 +134,34 @@
 
 **Noted: 本版本为预览版，可能出现一些错误和未知的Bug。更新到本版本前请备份好原来的版本。**
 
-- Changed: 架构大改，现在变成了事件驱动的模块化设计，可扩展性变强了（by Uint）
+- Changed: 架构大改，现在变成了事件驱动的面向对象模块化设计，可扩展性变强了。（by Uint）
+
+- *但是可读性变差了。何时出开发文档 ——M42*
+
+
+## v1.5.0-Beta-3 2025/12/4
+
+**Noted: 本版本为预览版，可能出现一些错误和未知的Bug。更新到本版本前请备份好原来的版本。**
+
+### Added
+
+- 增加了对于 `notice` 类型事件的处理，包括其他用户戳一戳其他用户、对于消息贴表情的追踪。基于此实现了跟随贴表情和自动回复功能。（by Catismfans）
+
+- 增加了自动跟贴表情功能。可以在 `config.json` 中设置是否开启跟随贴表情及其概率 `do_follow_emoji`  `follow_emoji_possibility` 。（by Catismfans）
+
+- 增加了检测某条消息的表情数并在超过阈值时自动回复的功能。可以在 `config.json` 中设置是否开启自动回复 `do_emoji_threshold_reply` 、自动回复概率 `emoji_threshold_reply_possibility` 及详细设置回复表情、阈值、内容 `emoji_threshold_reply` 。（by Catismfans & M42）
+
+
+### Changed
+
+- 完善了新框架中 `Message` 类对于事件的处理。~~不喜欢写 `.get()` 然后疯狂爆 `KeyError` 这一块~~ （by M42）
+
+- 由于更新到新框架的原因暂时移除了先前的等待时间功能。该部分将在 `1.5.0-Beta-4` 中发布。（by M42）
+
+- 移除了部分由于升级到新框架所废弃的代码。（by M42）
+
+- 略微更新了在终端显示聊天内容的机制。（by M42）
+
+### Fixed
+
+- 修复了一些已知的bug。

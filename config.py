@@ -15,7 +15,6 @@ class Config:
         self.keyword_reply = config.get('keyword_reply', [])
         self.random_reply = config.get('random_reply', [])
         self.ated_reply = config.get('ated_reply', [])
-        self.time_reply = config.get('time_reply', [])
         
         # 概率配置
         self.keyword_possibility = config.get('keyword_possibility', 0)
@@ -28,8 +27,9 @@ class Config:
         self.poke_possibility = config.get("poke_possibility", 0)
         self.llm_possibility = config.get("llm_possibility", 0)
         
-        # 功能开关
+        # 定时回复功能
         self.do_report = config.get("do_report", False)
+        self.time_reply = config.get('time_reply', [])
         
         # LLM配置
         llm_settings = config.get("llm_settings", {})
@@ -53,3 +53,12 @@ class Config:
         self.heartflow_random_weight = heartflow_settings.get("random_weight", 0.1)
         self.heartflow_reply_threshold = heartflow_settings.get("reply_threshold", 0.5)
         self.heartflow_do_heartflow = heartflow_settings.get("do_heartflow", False)
+
+        # 跟随贴表情配置
+        self.follow_emoji = config.get("do_follow_emoji", False)
+        self.follow_emoji_possibility = config.get("follow_emoji_possibility", 0)
+
+        #贴表情自动回复配置
+        self.do_emoji_threshold_reply = config.get("do_emoji_threshold_reply", False)
+        self.emoji_threshold_reply = config.get("emoji_threshold_reply", [])
+        self.emoji_threshold_reply_possibility = config.get("emoji_threshold_reply_possibility", 0)
