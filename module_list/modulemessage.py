@@ -1,20 +1,24 @@
 from message_utils import *
 import random
-from llm_service import *
 from module import Module
 
 class MessageModule(Module):
+    prerequisite = ['config']
     def __init__(self):
         pass
-    async def on_recv_msg(self, message_handler, message, config):
+    async def on_recv_msg(self, event : Event, context : EventContext):
         pass
-    def register(self, message_handler):
-        message_handler.register_listener(EventType.EVENT_RECV_MSG, self.on_recv_msg)
+    def register(self, message_handler, event_handler, module_handler):
+        message_handler.register_listener(self, EventType.EVENT_RECV_MSG, self.on_recv_msg)
 
 
 class Repeat(MessageModule):
-    async def on_recv_msg(self, message_handler, message, config):
+    async def on_recv_msg(self, event, context):
         """处理复读"""
+        message = event.data
+        config = context.mod.config
+        message_handler = context.message_handler
+
         if str(message) == self.last_message:
             self.repeat_count += 1
             if random.random() <= config.repeat_possibility and self.repeat_count == 1:
@@ -25,14 +29,19 @@ class Repeat(MessageModule):
         
         return False
     
-    def register(self, message_handler):
-        super().register(message_handler)
+    def register(self, message_handler, event_handler, module_handler):
+        super().register(message_handler, event_handler, module_handler)
         self.last_message = ''
         self.repeat_count = 0
 
 class RandomReply(MessageModule):
-    async def on_recv_msg(self, message_handler, message, config):
+    async def on_recv_msg(self, event, context):
         """处理随机回复"""
+        message = event.data
+        config = context.mod.config
+        message_handler = context.message_handler
+
+
         if not config.random_reply or random.random() > config.random_reply_possibility:
             return False
         
@@ -44,8 +53,13 @@ class RandomReply(MessageModule):
 
 
 class AtReply(MessageModule):
-    async def on_recv_msg(self, message_handler:MessageHandler, message, config):
+    async def on_recv_msg(self, event, context):
         """处理随机回复"""
+        message = event.data
+        config = context.mod.config
+        message_handler = context.message_handler
+
+
         # 检查是否被艾特
         data = message.data
         self_id = data.get("self_id")
@@ -60,7 +74,7 @@ class AtReply(MessageModule):
                 return False
         
             if random.random() <= config.llm_possibility and config.llm_url:
-                reply_lines = await message_handler.llm_service.call_llm(str(message), message.user_id, None)
+                reply_lines = await context.mod.llm_service.call_llm(str(message), message.user_id, None)
                 if reply_lines:
                     send_list = []
                     for idx, line in enumerate(reply_lines):
@@ -85,8 +99,13 @@ class AtReply(MessageModule):
     
 
 class Poke(MessageModule):
-    async def on_recv_msg(self, message_handler, message, config):
+    async def on_recv_msg(self, event, context):
         """处理戳一戳"""
+        message = event.data
+        config = context.mod.config
+        message_handler = context.message_handler
+
+
         if random.random() <= config.poke_possibility:
             await message_handler.send_poke(message.user_id)
             print("已戳一戳",message.user_id)
@@ -98,8 +117,13 @@ class Poke(MessageModule):
 
 
 class KeywordReply(MessageModule):
-    async def on_recv_msg(self, message_handler, message, config):
+    async def on_recv_msg(self, event, context):
         """处理关键词回复"""
+        message = event.data
+        config = context.mod.config
+        message_handler = context.message_handler
+
+
         if not config.keyword_reply or random.random() > config.keyword_possibility:
             return False
         
@@ -111,8 +135,14 @@ class KeywordReply(MessageModule):
     
 
 class SpecialReply(MessageModule):
-    async def on_recv_msg(self, message_handler, message, config):
+    async def on_recv_msg(self, event, context):
         """处理特殊用户回复"""
+        message = event.data
+        config = context.mod.config
+        message_handler = context.message_handler
+
+
+
         if not config.set_reply or random.random() > config.set_reply_possiblity:
             return False
         
@@ -127,8 +157,13 @@ class SpecialReply(MessageModule):
 
 
 class Emoji(MessageModule):
-    async def on_recv_msg(self, message_handler, message, config):
+    async def on_recv_msg(self, event, context):
         """处理贴表情"""
+        message = event.data
+        config = context.mod.config
+        message_handler = context.message_handler
+
+
         if not config.set_emoji or random.random() > config.emoji_possibility:
             return False
         
@@ -142,8 +177,13 @@ class Emoji(MessageModule):
 
 
 class RandomAt(MessageModule):
-    async def on_recv_msg(self, message_handler, message, config):
+    async def on_recv_msg(self, event, context):
         """处理随机艾特"""
+        message = event.data
+        config = context.mod.config
+        message_handler = context.message_handler
+
+
         reply = ''
         if random.random() <= config.at_possibility:
             reply = [("reply",message.message_id),("at",message.user_id)]
@@ -153,21 +193,25 @@ class RandomAt(MessageModule):
     
 
 
-from heartflow import HeartFlow
+from heartflow import heartflow
 
 class LLMReply(MessageModule):
-    async def on_recv_msg(self, message_handler, message, config):
+    async def on_recv_msg(self, event, context):
         reply_lines = []
+        message = event.data
+        config = context.mod.config
+        message_handler = context.message_handler
+
+
         if config.heartflow_do_heartflow:
-            heartflow = HeartFlow(config)
-            do_llm = await heartflow.should_reply(str(message), message.user_id, message.nickname)
+            do_llm = await context.mod.heartflow.should_reply(str(message), message.user_id, message.nickname)
             if not do_llm:
                 return False
             else:
-                reply_lines = await message_handler.llm_service.call_llm(str(message), message.user_id, message.nickname)
+                reply_lines = await context.mod.llm.call_llm(str(message), message.user_id, message.nickname)
         else:
             if random.random() <= config.llm_possibility:
-                reply_lines = await message_handler.llm_service.call_llm(str(message), message.user_id, message.nickname)
+                reply_lines = await context.mod.llm.call_llm(str(message), message.user_id, message.nickname)
         
         if not reply_lines:
                 return False

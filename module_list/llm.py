@@ -1,12 +1,19 @@
 import aiohttp
 from collections import deque
-from config import Config
 from datetime import datetime
+from module import *
 
-class LLMService:
-    def __init__(self, config: Config):
-        self.config = config
-        self.recent_messages = deque(maxlen=config.background_message_number)
+class llm(Module):
+    prerequisite = ['config']
+
+
+    def __init__(self):
+        self.config = None
+        self.recent_messages = None
+
+    def register(self, message_handler, event_handler, mod):
+        self.config = mod.config
+        self.recent_messages = deque(maxlen=self.config.background_message_number)
     
     def add_message_to_history(self, user_id, sender, text):
         """添加消息到历史记录"""
@@ -65,3 +72,10 @@ class LLMService:
         except Exception as e:
             print(f"LLM调用失败: {e}")
             return []
+        
+    async def on_recv_msg(self, event, context):
+        message = event.data
+        config = context.mod.config
+        message_handler = context.message_handler
+
+        self.add_message_to_history(message.user_id, message.nickname, str(message))
