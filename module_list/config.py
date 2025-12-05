@@ -1,7 +1,11 @@
+from module import Module
 import json
 
-class Config:
-    def __init__(self, config_path="config.json"):
+
+class config(Module):
+    #, config_path="config.json"
+    def __init__(self):
+        config_path="config.json"
         with open(config_path, "r", encoding='utf-8') as f:
             config = json.load(f)
         
