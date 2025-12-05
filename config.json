@@ -69,11 +69,10 @@
     "ated_reply_possibility":0.5,
     "ated_reply_llm_possibility":0.0,
     "poke_possibility":0.01,
-    "llm_possibility":0.0,
+    "llm_possibility":0.01,
     "do_report":true,
     "do_follow_emoji": true,
     "follow_emoji_possibility": 0.5,
     "do_emoji_threshold_reply": true,
     "emoji_threshold_reply_possibility": 0.2
-
 }
