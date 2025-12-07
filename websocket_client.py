@@ -52,7 +52,7 @@ class WebSocketClient:
                     )
                     break
             except Exception as e:
-                self.logger.error(f"WebSocket连接错误: {e}，正在尝试重新连接...")
+                self.logger.error(f"WebSocket连接错误: [{e}] Autowater将在 5 秒后尝试重新连接...")
                 await asyncio.sleep(5)
                 continue
     
