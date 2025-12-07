@@ -5,6 +5,7 @@ from collections.abc import Iterable
 import random
 from module import *
 from event import *
+from logger import Logger
 
 
 
@@ -180,6 +181,7 @@ class MessageHandler:
         self.messages = dict()
         self.event_handler = EventHandler()
         self.module_handler = module_handler
+        self.logger = Logger()
 
     def start_message_handler(self):
         self.group_ids = self.module_handler.config.target_groups
@@ -208,7 +210,6 @@ class MessageHandler:
             await self.websocket.send(json.dumps(message.payload))
         elif isinstance(text, Message):
             message = text
-            print(message.payload)
             if not message.has_group_id:
                 message.payload["params"]["group_id"] = group_id
             await self.websocket.send(json.dumps(message.payload))
@@ -236,6 +237,7 @@ class MessageHandler:
             }
         }
         await self.send_message(Message(payload), group_id)
+        self.logger.info(f"已在群 {group_id}戳一戳用户 {user_id}")
     
     async def send_emoji_like(self, message_id, emoji_id):
         payload = {
@@ -246,6 +248,7 @@ class MessageHandler:
             }
         }
         await self.send_message(Message(payload))
+        self.logger.info(f"已为消息 {message_id} 贴表情 {emoji_id}")
     
     async def send_message_list(self, send_list, group_id:None|int|str|Iterable=None):
         """发送消息列表"""
@@ -276,10 +279,8 @@ class MessageHandler:
 
             # 事件广播
             if data.get("post_type") == "message":
-                #self.llm_service.add_message_to_history(user_id, nickname, str(message))
-                #上面这句话移动到llm模块里面了
                 await self.dispatch_event(EventType.EVENT_RECV_MSG, message)
-                print(f"{nickname}({user_id})：{message}")
+                self.logger.info(f"[\033[34m消息\033[0m][\033[34m群聊\033[0m][{data.get('group_name')}({group_id})]{nickname}({user_id})：{message}")
             else:
                 await self.dispatch_event(EventType.EVENT_NOTICE_MSG, message)
         else:
