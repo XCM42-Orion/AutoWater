@@ -2,9 +2,10 @@ from message_utils import *
 import random
 from module import Module
 from event import *
+from logger import Logger
 
 class NoticeModule(Module):
-    prerequisite = ['historyhandler']
+    prerequisite = ['config','historyhandler']
     def __init__(self):
         pass
     async def on_notice_msg(self, event : Event, event_handler : EventHandler):
@@ -47,7 +48,6 @@ class FollowEmoji(NoticeModule):
                 if not self.emoji_replied.query((message_id,emoji_id)):
                     self.emoji_replied.insert((message_id,emoji_id))
                     await message_handler.send_emoji_like(message_id,emoji_id)
-                    print(f"已为消息{message_id}贴表情{emoji_id}")
                     return True
         return False
     def unregister(self):
@@ -58,6 +58,7 @@ class EmojiThreshold(NoticeModule):
     def __init__(self):
         # 已达到消息阈值的emoji 消息
         self.emoji_counted_message = None
+        self.logger = Logger()
 
 
     async def on_notice_msg(self, event, event_context):
@@ -88,8 +89,8 @@ class EmojiThreshold(NoticeModule):
                         if random.random() <= config.emoji_threshold_reply_possibility:
                             self.emoji_counted_message.insert((message_id,emoji_id))
                             finalreply = random.choice(reply.get('reply'))
+                            self.logger.info(f"消息{message_id}表情{emoji_id}达标")
                             await message_handler.send_message(Message(finalreply),message.data.get('group_id'))
-                            print(f"消息{message_id}表情{emoji_id}达标，已回复{finalreply}")
                             return True
         return False
     
