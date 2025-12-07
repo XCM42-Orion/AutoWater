@@ -23,7 +23,7 @@ class Repeat(MessageModule):
         if str(message) == self.last_message:
             self.repeat_count += 1
             if random.random() <= config.repeat_possibility and self.repeat_count == 1:
-                Logger.info(f"触发复读：{message}")
+                Logger.info(f"触发复读：{str(message)}")
                 await asyncio.sleep(context.mod.delay.constant_delay(0.5))
                 return await message_handler.send_message(Message(message),message.data.get('group_id'))
         else:
@@ -49,7 +49,7 @@ class RandomReply(MessageModule):
             return False
         
         reply_message = Message(random.choice(config.random_reply))
-        Logger.info(f"触发随机回复：{reply_message}")
+        Logger.info(f"触发随机回复：{str(reply_message)}")
         await asyncio.sleep(context.mod.delay.standard_delay(str(message),str(reply_message)))
         await message_handler.send_message(reply_message,message.data.get('group_id'))
         return True
@@ -100,9 +100,10 @@ class AtReply(MessageModule):
             # 使用预定义的回复
             if config.ated_reply:
                 logger = Logger()
-                logger.info(f"触发被艾特预定义回复：{config.ated_reply}")
-                await asyncio.sleep(context.mod.delay.only_output_delay(random.choice(config.ated_reply)))
-                await message_handler.send_message(Message(random.choice(config.ated_reply)),group_id)
+                reply_lines = random.choice(config.ated_reply)
+                logger.info(f"触发被艾特预定义回复：{reply_lines}")
+                await asyncio.sleep(context.mod.delay.only_output_delay(reply_lines))
+                await message_handler.send_message(Message(reply_lines),group_id)
                 return True
             
             return False
@@ -140,9 +141,10 @@ class KeywordReply(MessageModule):
         
         for keyword_item in config.keyword_reply:
             if keyword_item['keyword'] in str(message):
-                await asyncio.sleep(context.mod.delay.standard_delay(str(message),keyword_item['reply']))
-                await message_handler.send_message(Message(random.choice(keyword_item['reply']),message.data.get('group_id')))
-                Logger.info(f"触发关键词回复：{keyword_item['keyword']} -> {keyword_item['reply']}")
+                reply = random.choice(keyword_item['reply'])
+                await asyncio.sleep(context.mod.delay.standard_delay(str(message),reply))
+                await message_handler.send_message(Message(),message.data.get('group_id'))
+                Logger.info(f"触发关键词回复：{keyword_item['keyword']} -> {reply}")
                 return True
         return False
     
