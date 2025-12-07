@@ -5,7 +5,7 @@ from event import *
 from logger import Logger
 
 class NoticeModule(Module):
-    prerequisite = ['config','historyhandler']
+    prerequisite = ['config','historyhandler','delay']
     def __init__(self):
         pass
     async def on_notice_msg(self, event : Event, event_handler : EventHandler):
@@ -47,6 +47,7 @@ class FollowEmoji(NoticeModule):
             if random.random() <= config.follow_emoji_possibility:
                 if not self.emoji_replied.query((message_id,emoji_id)):
                     self.emoji_replied.insert((message_id,emoji_id))
+                    await asyncio.sleep(event_context.mod.delay.constant_delay(3))
                     await message_handler.send_emoji_like(message_id,emoji_id)
                     return True
         return False
@@ -90,6 +91,7 @@ class EmojiThreshold(NoticeModule):
                             self.emoji_counted_message.insert((message_id,emoji_id))
                             finalreply = random.choice(reply.get('reply'))
                             self.logger.info(f"消息{message_id}表情{emoji_id}达标")
+                            await asyncio.sleep(event_context.mod.delay.only_output_delay(finalreply))
                             await message_handler.send_message(Message(finalreply),message.data.get('group_id'))
                             return True
         return False

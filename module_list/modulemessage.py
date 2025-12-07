@@ -4,9 +4,9 @@ from module import Module
 from logger import Logger
 
 class MessageModule(Module):
-    prerequisite = ['config']
+    prerequisite = ['config','delay']
     def __init__(self):
-        pass
+        pass    
     async def on_recv_msg(self, event : Event, context : EventContext):
         pass
     def register(self, message_handler, event_handler, module_handler):
@@ -24,6 +24,7 @@ class Repeat(MessageModule):
             self.repeat_count += 1
             if random.random() <= config.repeat_possibility and self.repeat_count == 1:
                 Logger.info(f"触发复读：{message}")
+                await asyncio.sleep(context.mod.delay.constant_delay(0.5))
                 return await message_handler.send_message(Message(message),message.data.get('group_id'))
         else:
             self.last_message = str(message)
@@ -49,6 +50,7 @@ class RandomReply(MessageModule):
         
         reply_message = Message(random.choice(config.random_reply))
         Logger.info(f"触发随机回复：{reply_message}")
+        await asyncio.sleep(context.mod.delay.standard_delay(str(message),str(reply_message)))
         await message_handler.send_message(reply_message,message.data.get('group_id'))
         return True
     
@@ -90,13 +92,16 @@ class AtReply(MessageModule):
                         
                         send_list.append(Message(reply))
                     
-                    await message_handler.send_message_list(send_list,group_id)
+                    for reply_msg in send_list:
+                        await asyncio.sleep(context.mod.delay.standard_delay(str(message),str(reply_msg)))
+                        await message_handler.send_message(reply_msg,group_id)
                     return True
             
             # 使用预定义的回复
             if config.ated_reply:
                 logger = Logger()
                 logger.info(f"触发被艾特预定义回复：{config.ated_reply}")
+                await asyncio.sleep(context.mod.delay.only_output_delay(random.choice(config.ated_reply)))
                 await message_handler.send_message(Message(random.choice(config.ated_reply)),group_id)
                 return True
             
@@ -113,6 +118,7 @@ class Poke(MessageModule):
 
 
         if random.random() <= config.poke_possibility:
+            await asyncio.sleep(context.mod.delay.constant_delay(3))
             await message_handler.send_poke(message.user_id)
             return True
         return False
@@ -134,6 +140,7 @@ class KeywordReply(MessageModule):
         
         for keyword_item in config.keyword_reply:
             if keyword_item['keyword'] in str(message):
+                await asyncio.sleep(context.mod.delay.standard_delay(str(message),keyword_item['reply']))
                 await message_handler.send_message(Message(random.choice(keyword_item['reply']),message.data.get('group_id')))
                 Logger.info(f"触发关键词回复：{keyword_item['keyword']} -> {keyword_item['reply']}")
                 return True
@@ -156,6 +163,7 @@ class SpecialReply(MessageModule):
             reply = ''
             if message.user_id == special_user['id']:
                 reply = [('reply',message.message_id),special_user['reply']]
+                await asyncio.sleep(context.mod.delay.only_output_delay(special_user['reply']))
                 await message_handler.send_message(Message(reply),message.data.get('group_id'))
                 Logger.info(f"触发特殊用户回复：{special_user['id']} -> {special_user['reply']}")
                 return True
@@ -176,6 +184,7 @@ class Emoji(MessageModule):
         
         for emoji_user in config.set_emoji:
             if message.user_id == emoji_user['id']:
+                await asyncio.sleep(context.mod.delay.constant_delay(3))
                 await message_handler.send_emoji_like(message.message_id,emoji_user['emoji_id'])
                 return True
         return False
@@ -194,6 +203,7 @@ class RandomAt(MessageModule):
         reply = ''
         if random.random() <= config.at_possibility:
             reply = [("reply",message.message_id),("at",message.user_id)]
+            await asyncio.sleep(context.mod.delay.constant_delay(3))
             await message_handler.send_message(Message(reply),message.data.get('group_id'))
             Logger.info(f"触发随机艾特：@{message.user_id}")
             return True
@@ -229,5 +239,7 @@ class LLMReply(MessageModule):
             else:
                 reply = [line.strip()]
             send_list.append(Message(reply))
-        await message_handler.send_message_list(send_list)
+        for reply_msg in send_list:
+            await asyncio.sleep(context.mod.delay.standard_delay(str(message),str(reply_msg)))
+            await message_handler.send_message(reply_msg,message.data.get('group_id'))
         return True
