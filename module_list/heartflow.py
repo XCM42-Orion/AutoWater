@@ -4,12 +4,14 @@ import json
 import random
 from module import *
 import config
+import logger
 
 class heartflow(Module):
     prerequisite = ['llm','config']
     def __init__(self):
         self.config = None
         self.recent_messages = None
+        self.logger = logger.Logger()
 
     def register(self, message_handler, event_handler, mod):
         self.config = mod.config
@@ -69,18 +71,18 @@ class heartflow(Module):
                     data = await resp.json()
                     return data["choices"][0]["message"]["content"]
         except Exception as e:
-            print(f"HeartFlow API 调用出错: {e}")
+            self.logger.error(f"HeartFlow API 调用出错: {e}")
             return ""
         
     async def should_reply(self, user_msg, user_id=None, nickname=None):
         """判断是否回复"""
         response = await self.call_heartflow_llm(user_msg, user_id, nickname)
-        print(f"HeartFlow API 返回: {response}")
+        self.logger.info(f"HeartFlow API 返回: {response}")
         result = json.loads(response)
         social_willingness = float(result.get("social_willingness", 0))
         context_weight = float(result.get("context_weight", 0))
         reply_willingness = social_willingness*self.config.heartflow_willing_weight + context_weight*self.config.heartflow_context_weight + self.config.heartflow_random_weight*random.random()
-        print(f"HeartFlow 计算的回复意愿值: {reply_willingness}")
+        self.logger.info(f"HeartFlow 计算的回复意愿值: {reply_willingness}")
         if reply_willingness >= self.config.heartflow_reply_threshold:
                 return True
         else:

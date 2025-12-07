@@ -2,6 +2,7 @@ import aiohttp
 from collections import deque
 from datetime import datetime
 from module import *
+from logger import Logger
 
 class llm(Module):
     prerequisite = ['config']
@@ -10,6 +11,7 @@ class llm(Module):
     def __init__(self):
         self.config = None
         self.recent_messages = None
+        self.logger = Logger()
 
     def register(self, message_handler, event_handler, mod):
         self.config = mod.config
@@ -67,10 +69,10 @@ class llm(Module):
                     resp.raise_for_status()
                     result = await resp.json()
                     raw_str = result["choices"][0]["message"]["content"]
-                    print(f"LLM返回原始内容: {raw_str}")
+                    self.logger.info(f"LLM返回原始内容: {raw_str}")
                     return raw_str.split('%n')
         except Exception as e:
-            print(f"LLM调用失败: {e}")
+            self.logger.error(f"LLM调用失败: {e}")
             return []
         
     async def on_recv_msg(self, event, context):
