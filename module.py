@@ -72,7 +72,7 @@ def load_attribute(json_path: str) -> ModuleAttribute | None:
         raise Exception('\033[91m[Error]\033[0mModuleAttribute信息不完整')
     
     attribute.prerequisite = attribute_data['prerequisite'] if 'prerequisite' in attribute_data else []
-
+    
     return attribute
     
 
