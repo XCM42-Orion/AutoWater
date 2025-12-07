@@ -1,16 +1,13 @@
 import json
-#from actions import ActionHandler
-from llm_service import LLMService
 from enum import Enum
 import asyncio
 from collections.abc import Iterable
 import random
+from module import *
+from event import *
+from logger import Logger
 
-class EventType(Enum):
-    EVENT_INIT = 0
-    EVENT_RECV_MSG = 1
-    EVENT_PRE_SEND_MSG = 2
-    EVENT_NOTICE_MSG = 3
+
 
 class MessageComponent:
     def __init__(self, *args):
@@ -171,88 +168,98 @@ class Message:
                 elif raw_component['type'] == 'reply':
                     self.content.append(MessageComponent('at',raw_component['data']['id']))
 
-    
-    
-
+# 修改 MessageHandler 以使用优先级系统
 class MessageHandler:
-    def __init__(self, config, websocket):
-        self.config = config
-        #self.action_handler = ActionHandler(config)
-        self.llm_service = LLMService(config)
-        self.listeners = {}
+    def __init__(self, websocket, module_handler):
+        #self.config = config
+        #self.llm_service = LLMService(config)
+        # 使用新的优先级监听器系统
+        self.listener_system = EventHandler()
         self.websocket = websocket
-        self.group_ids = self.config.target_groups
+        self.group_ids = list()
         self.self_id = str()
         self.messages = dict()
+        self.event_handler = EventHandler()
+        self.module_handler = module_handler
+        self.logger = Logger()
 
-    def register_listener(self, event_type, listener):
-        self.listeners.setdefault(event_type, []).append(listener)
+    def start_message_handler(self):
+        self.group_ids = self.module_handler.config.target_groups
+    
+    def register_listener(self, module: Module, event_type: EventType, listener: Callable, priority: int = 0):
+        """注册监听器（封装方法）"""
+        '''#WARNING:priority越小越优先'''
+        self.listener_system._inner_register_listener(module, event_type, listener, priority)
+    
+    async def dispatch_event(self, event_type: EventType, data: Any):
+        """分发事件（封装方法）"""
+        context = EventContext()
 
-    async def dispatch_event(self, event_type, message):
-        tasks = [l(self, message, self.config) if asyncio.iscoroutinefunction(l) else None 
-                 for l in self.listeners.get(event_type,[])]
-        await asyncio.gather(*(t for t in tasks if t))
+        context.message_handler = self
+        context.mod = self.module_handler
 
+        event = Event(event_type, context, data)
+
+        await self.listener_system.dispatch_event(event)
+    
     async def send_message_single_group(self, text:str|Message, group_id: str|int):
         """发送消息到WebSocket"""
-        if isinstance(text, str):       #判断消息是text还是Message。所以这两种类型都可以发送。
+        if isinstance(text, str):
             message = Message(text)
             message.payload["params"]["group_id"] = group_id
             await self.websocket.send(json.dumps(message.payload))
         elif isinstance(text, Message):
             message = text
-            print(message.payload)
             if not message.has_group_id:
                 message.payload["params"]["group_id"] = group_id
             await self.websocket.send(json.dumps(message.payload))
-
+    
     async def send_message_groups(self, text:str|Message, group_ids: Iterable):
-        message_tasks=[ asyncio.create_task(self.send_message_single_group(text,group_id)) for group_id in group_ids]
+        message_tasks = [asyncio.create_task(self.send_message_single_group(text, group_id)) 
+                         for group_id in group_ids]
         await asyncio.gather(*message_tasks)
-
+    
     async def send_message(self, text:str|Message, group_id:None|int|str|Iterable=None):
-        #处理多种group_id格式
         if group_id is None:
-            await self.send_message_groups(text,self.group_ids)
+            await self.send_message_groups(text, self.group_ids)
         elif isinstance(group_id, Iterable):
-            await self.send_message_groups(text,group_id)
+            await self.send_message_groups(text, group_id)
         else:
-            await self.send_message_single_group(text,group_id)
-
-        
-
+            await self.send_message_single_group(text, group_id)
+    
     async def send_poke(self, user_id, group_id:None|int|str|Iterable=None):
         if group_id is None:
-            group_id=random.choice(self.group_ids)
+            group_id = random.choice(self.group_ids)
         payload = {
-                "action": "send_poke",
-                "params": {
-                    "user_id": user_id,
-                }
+            "action": "send_poke",
+            "params": {
+                "user_id": user_id,
             }
-        await self.send_message(Message(payload),group_id)
-
+        }
+        await self.send_message(Message(payload), group_id)
+        self.logger.info(f"已在群 {group_id}戳一戳用户 {user_id}")
+    
     async def send_emoji_like(self, message_id, emoji_id):
         payload = {
-                    "action": "set_msg_emoji_like",
-                    "params": {
-                        "message_id": message_id,
-                        "emoji_id": emoji_id
-                    }
-                }
+            "action": "set_msg_emoji_like",
+            "params": {
+                "message_id": message_id,
+                "emoji_id": emoji_id
+            }
+        }
         await self.send_message(Message(payload))
-
+        self.logger.info(f"已为消息 {message_id} 贴表情 {emoji_id}")
+    
     async def send_message_list(self, send_list, group_id:None|int|str|Iterable=None):
         """发送消息列表"""
         for send_item in send_list:
-            await self.send_message(Message(send_item),group_id)
-
+            await self.send_message(Message(send_item), group_id)
+    
     def set_websocket(self, websocket):
         self.websocket = websocket
-
+    
     async def process_message(self, data):
         """处理收到的消息"""
-
         if (data.get("post_type") == "message" and data.get("message_type") == "group") or data.get("post_type") == "notice":       
             group_id = data.get("group_id")
             if group_id not in self.group_ids:
@@ -260,8 +267,6 @@ class MessageHandler:
             
             self.self_id = str(data.get("self_id"))
                 
-            # 提取消息内容
-            #text = "".join(seg["data"]["text"] for seg in data["message"] if seg["type"] == "text")
             user_id = data["user_id"]
             message_id = data.get("message_id")
             if data.get("sender") is None:
@@ -274,12 +279,26 @@ class MessageHandler:
 
             # 事件广播
             if data.get("post_type") == "message":
-                # 添加到历史记录
-                self.llm_service.add_message_to_history(user_id, nickname, str(message))
                 await self.dispatch_event(EventType.EVENT_RECV_MSG, message)
-                print(f"{nickname}({user_id})：{message}")
+                self.logger.info(f"[\033[34m消息\033[0m][\033[34m群聊\033[0m][{data.get('group_name')}({group_id})]{nickname}({user_id})：{message}")
             else:
                 await self.dispatch_event(EventType.EVENT_NOTICE_MSG, message)
         else:
             return
+'''
+# 使用示例装饰器（可选）
+def listener(event_type: EventType, priority: Priority = Priority.NORMAL):
+    """监听器装饰器"""
+    def decorator(func):
+        func._listener_info = (event_type, priority)
+        return func
+    return decorator
 
+def register_listeners_from_class(handler: MessageHandler, listener_class):
+    """从类中自动注册监听器"""
+    for attr_name in dir(listener_class):
+        attr = getattr(listener_class, attr_name)
+        if callable(attr) and hasattr(attr, '_listener_info'):
+            event_type, priority = attr._listener_info
+            handler.register_listener(event_type, attr, priority)'''
+    
