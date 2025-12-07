@@ -1,6 +1,8 @@
 import random
 from collections import deque
 from typing import *
+import json
+import os
 
 class Module:
     def __init__(self):
@@ -18,25 +20,63 @@ class Module:
 #暂未实现，目前单纯靠classname来区分不同module
 #这个类相当于classname: str
 class ModuleAttribute:
-    def __init__(self):
-        #给用户看的名（如Example Module）
-        #TODO:暂未实现
-        self.name = str()
 
-        #注册名（如example_module）
-        #目前暂时为类名
-        self.register_name = str()
+    #给用户看的名（如Example Module）
+    name : str | None
 
-        #是否是内置module
-        self.is_builtin = True
+    #注册名（如example_module）
+    #目前暂时为类名
+    register_name : str | None
 
-        #前置module
-        #目前无用
-        self.prerequisite = list[str]
+    #是否是内置module
+    is_builtin : bool = True
 
-        #版本、作者等
-        #TODO:暂未实现
+    #前置module
+    #目前无用
+    prerequisite : list[str]
 
+    #版本
+    version : str | None
+
+    #作者
+    author : str| None
+
+    #描述
+    desc : str | None
+
+    def __str__(self) -> str:
+        return f"Module {self.name} ({self.version}) by {self.author}: {self.desc}"
+
+    def __repr__(self) -> str:
+        return f"Module {self.name} ({self.version}) by {self.author}: {self.desc}"
+
+# 给定json的目录路径，加载ModuleAttribute类
+def load_attribute(json_path: str) -> ModuleAttribute | None:
+    
+    attribute_data = None
+
+    if os.path.exists(json_path):
+        with open(json_path+'/attribute.json') as f:
+            attribute_data=json.load(f)
+    else:
+        raise Exception('\033[91m[Error]\033[0m路径下不存在attribute.json文件')
+    
+    try:
+        attribute = ModuleAttribute( 
+            name = attribute_data['name'],
+            register_name = attribute_data['register_name'],
+            version = attribute_data['version'],
+            author = attribute_data['author'],
+            desc = attribute_data['desc'])
+    except Exception:
+        raise Exception('\033[91m[Error]\033[0mModuleAttribute信息不完整')
+    
+    attribute.prerequisite = attribute_data['prerequisite'] if 'prerequisite' in attribute_data else []
+
+    return attribute
+    
+
+            
     
 class ModuleHandler:
     def __init__(self):
@@ -261,13 +301,15 @@ class ModuleHandler:
     #通过module的实例获得module的类名
     def get_classname_by_instance(self,instance):
         return type(instance).__name__
+    
+
 
 
 ####################################################################################
 
 
 
-import os
+
 import sys
 import importlib.util
 import importlib
@@ -351,3 +393,4 @@ def scan_module():
                         print(f"Error instantiating {class_name} or calling register(): {e}")
     
     return module_instances
+
