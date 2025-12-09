@@ -48,9 +48,9 @@ class RandomReply(MessageModule):
             return False
         
         reply_message = Message(random.choice(config.random_reply))
+
         Logger.info(f"触发随机回复：{reply_message}")
-        await message_handler.send_message(reply_message,message.data.get('group_id'))
-        return True
+        return await message_handler.send_message(reply_message,message.data.get('group_id'))
     
 
 
@@ -77,6 +77,7 @@ class AtReply(MessageModule):
         
             if random.random() <= config.llm_possibility and config.llm_url:
                 logger = Logger()
+                logger.info("触发被艾特LLM回复，开始调用LLM接口")
                 reply_lines = await context.mod.llm_service.call_llm(str(message), message.user_id, None)
                 logger.info(f"触发被艾特LLM回复：{reply_lines}")
                 if reply_lines:
@@ -90,18 +91,16 @@ class AtReply(MessageModule):
                         
                         send_list.append(Message(reply))
                     
-                    await message_handler.send_message_list(send_list,group_id)
-                    return True
+                    return await message_handler.send_message(send_list,group_id)
             
             # 使用预定义的回复
             if config.ated_reply:
                 logger = Logger()
                 logger.info(f"触发被艾特预定义回复：{config.ated_reply}")
-                await message_handler.send_message(Message(random.choice(config.ated_reply)),group_id)
-                return True
+                return await message_handler.send_message(Message(random.choice(config.ated_reply)),group_id)
             
             return False
-        return True
+        return False
     
 
 class Poke(MessageModule):
@@ -113,8 +112,7 @@ class Poke(MessageModule):
 
 
         if random.random() <= config.poke_possibility:
-            await message_handler.send_poke(message.user_id)
-            return True
+            return await message_handler.send_poke(message.user_id)
         return False
         
 ##################
@@ -134,9 +132,8 @@ class KeywordReply(MessageModule):
         
         for keyword_item in config.keyword_reply:
             if keyword_item['keyword'] in str(message):
-                await message_handler.send_message(Message(random.choice(keyword_item['reply']),message.data.get('group_id')))
                 Logger.info(f"触发关键词回复：{keyword_item['keyword']} -> {keyword_item['reply']}")
-                return True
+                return message_handler.send_message(Message(random.choice(keyword_item['reply']),message.data.get('group_id')))
         return False
     
 
@@ -156,9 +153,8 @@ class SpecialReply(MessageModule):
             reply = ''
             if message.user_id == special_user['id']:
                 reply = [('reply',message.message_id),special_user['reply']]
-                await message_handler.send_message(Message(reply),message.data.get('group_id'))
                 Logger.info(f"触发特殊用户回复：{special_user['id']} -> {special_user['reply']}")
-                return True
+                return await message_handler.send_message(Message(reply),message.data.get('group_id'))
         return False
     
 
@@ -176,8 +172,7 @@ class Emoji(MessageModule):
         
         for emoji_user in config.set_emoji:
             if message.user_id == emoji_user['id']:
-                await message_handler.send_emoji_like(message.message_id,emoji_user['emoji_id'])
-                return True
+                return await message_handler.send_emoji_like(message.message_id,emoji_user['emoji_id'])
         return False
     
 
@@ -194,9 +189,8 @@ class RandomAt(MessageModule):
         reply = ''
         if random.random() <= config.at_possibility:
             reply = [("reply",message.message_id),("at",message.user_id)]
-            await message_handler.send_message(Message(reply),message.data.get('group_id'))
             Logger.info(f"触发随机艾特：@{message.user_id}")
-            return True
+            return await message_handler.send_message(Message(reply),message.data.get('group_id'))
         return False
     
 
@@ -229,5 +223,4 @@ class LLMReply(MessageModule):
             else:
                 reply = [line.strip()]
             send_list.append(Message(reply))
-        await message_handler.send_message_list(send_list)
-        return True
+        return await message_handler.send_message(send_list)

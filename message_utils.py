@@ -140,6 +140,9 @@ class Message:
         for component in self.content:   #返回一个迭代器
             yield component
 
+    def __len__(self):
+        return len(str(self))
+
 
     def update_payload(self):
         self.payload = {
@@ -168,29 +171,39 @@ class Message:
                 elif raw_component['type'] == 'reply':
                     self.content.append(MessageComponent('at',raw_component['data']['id']))
 
+class SystemModule(Module):
+    pass
+
 # 修改 MessageHandler 以使用优先级系统
 class MessageHandler:
     def __init__(self, websocket, module_handler):
         #self.config = config
         #self.llm_service = LLMService(config)
         # 使用新的优先级监听器系统
-        self.listener_system = EventHandler()
+        self.event_handler = EventHandler(self)
         self.websocket = websocket
         self.group_ids = list()
         self.self_id = str()
         self.messages = dict()
-        self.event_handler = EventHandler()
+        self.event_handler = EventHandler(self)
         self.module_handler = module_handler
         self.logger = Logger()
+        self.message_history = list()
+
+        #发送信息时，以0优先级调用发送
+        self.system_module = SystemModule()
+        self.register_listener(self.system_module, EventType.EVENT_SEND_MSG, self._send_message)
 
     def start_message_handler(self):
         self.group_ids = self.module_handler.config.target_groups
     
     def register_listener(self, module: Module, event_type: EventType, listener: Callable, priority: int = 0):
         """注册监听器（封装方法）"""
-        '''#WARNING:priority越小越优先'''
-        self.listener_system._inner_register_listener(module, event_type, listener, priority)
+        '''WARNING:priority越大越优先'''
+        self.event_handler._inner_register_listener(module, event_type, listener, priority)
+
     
+
     async def dispatch_event(self, event_type: EventType, data: Any):
         """分发事件（封装方法）"""
         context = EventContext()
@@ -198,36 +211,49 @@ class MessageHandler:
         context.message_handler = self
         context.mod = self.module_handler
 
-        event = Event(event_type, context, data)
+        event = Event(event_type, data)
 
-        await self.listener_system.dispatch_event(event)
+        await self.event_handler.dispatch_event(event, context)
+
+    async def _send_message(self, event, context):
+        print(str(event.data[1]))
+        #await self.websocket.send(json.dumps(event.data[1].payload))
     
-    async def send_message_single_group(self, text:str|Message, group_id: str|int):
+    async def _send_message_single_group(self, module: Module, text:str|Message, group_id: str|int,proxy=None):
         """发送消息到WebSocket"""
+        #此处的proxy实际上是发送者的messagehandlerproxy
         if isinstance(text, str):
             message = Message(text)
             message.payload["params"]["group_id"] = group_id
-            await self.websocket.send(json.dumps(message.payload))
+            proxy.feedback(message)
+            await self.dispatch_event(EventType.EVENT_SEND_MSG, (proxy.context_proxy, message))
         elif isinstance(text, Message):
             message = text
             if not message.has_group_id:
                 message.payload["params"]["group_id"] = group_id
-            await self.websocket.send(json.dumps(message.payload))
+            proxy.feedback(message)
+            await self.dispatch_event(EventType.EVENT_SEND_MSG, (proxy.context_proxy, message))
+        return True
     
-    async def send_message_groups(self, text:str|Message, group_ids: Iterable):
-        message_tasks = [asyncio.create_task(self.send_message_single_group(text, group_id)) 
+    async def _send_message_groups(self, module: Module, text:str|Message, group_ids: Iterable, proxy=None):
+        message_tasks = [asyncio.create_task(self._send_message_single_group(module, text, group_id,proxy)) 
                          for group_id in group_ids]
         await asyncio.gather(*message_tasks)
+        return True
     
-    async def send_message(self, text:str|Message, group_id:None|int|str|Iterable=None):
-        if group_id is None:
-            await self.send_message_groups(text, self.group_ids)
-        elif isinstance(group_id, Iterable):
-            await self.send_message_groups(text, group_id)
-        else:
-            await self.send_message_single_group(text, group_id)
+    async def send_message(self, message:str|Message|Iterable, group_id:None|int|str|Iterable=None, proxy=None, module: Module = None):
+        if not isinstance(message, Iterable):
+            message = [message]
+
+        for text in message:
+            if group_id is None:
+                return await self._send_message_groups(module, text, self.group_ids,proxy)
+            elif isinstance(group_id, Iterable):
+                return await self._send_message_groups(module, text, group_id,proxy)
+            else:
+                return await self._send_message_single_group(module, text, group_id,proxy)
     
-    async def send_poke(self, user_id, group_id:None|int|str|Iterable=None):
+    async def send_poke(self, user_id, group_id:None|int|str|Iterable=None, proxy=None, module: Module = None):
         if group_id is None:
             group_id = random.choice(self.group_ids)
         payload = {
@@ -236,10 +262,11 @@ class MessageHandler:
                 "user_id": user_id,
             }
         }
-        await self.send_message(Message(payload), group_id)
+        await self.send_message(module, Message(payload), group_id, proxy)
         self.logger.info(f"已在群 {group_id}戳一戳用户 {user_id}")
+        return True
     
-    async def send_emoji_like(self, message_id, emoji_id):
+    async def send_emoji_like(self, message_id, emoji_id, proxy=None,module: Module = None):
         payload = {
             "action": "set_msg_emoji_like",
             "params": {
@@ -247,13 +274,9 @@ class MessageHandler:
                 "emoji_id": emoji_id
             }
         }
-        await self.send_message(Message(payload))
+        await self.send_message(Message(payload), None, proxy, module)
         self.logger.info(f"已为消息 {message_id} 贴表情 {emoji_id}")
-    
-    async def send_message_list(self, send_list, group_id:None|int|str|Iterable=None):
-        """发送消息列表"""
-        for send_item in send_list:
-            await self.send_message(Message(send_item), group_id)
+        return True
     
     def set_websocket(self, websocket):
         self.websocket = websocket
@@ -276,11 +299,11 @@ class MessageHandler:
 
             message = Message(user_id, message_id, nickname, data)
             self.messages[message_id] = message
-
             # 事件广播
             if data.get("post_type") == "message":
-                await self.dispatch_event(EventType.EVENT_RECV_MSG, message)
+                #先打印日志，后分发事件，以免delay模块造成阻塞，影响用户体验
                 self.logger.info(f"[\033[34m消息\033[0m][\033[34m群聊\033[0m][{data.get('group_name')}({group_id})]{nickname}({user_id})：{message}")
+                await self.dispatch_event(EventType.EVENT_RECV_MSG, message)
             else:
                 await self.dispatch_event(EventType.EVENT_NOTICE_MSG, message)
         else:

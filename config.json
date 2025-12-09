@@ -1,100 +1,47 @@
 {
     "target_groups":[
-        519253540
     ],
     "random_reply":[
-        "喵","何意味","和一位","核一维","别","？"," ","何意味。"
+        "example"
     ],  
     "set_reply":[
         {
-            "id":1936116726,
-            "reply":"饱饱"
-        },
-        {
-            "id":1942982477,
-            "reply":"何意味"
+            "id":123,
+            "reply":"123"
         }
     ],
     "set_emoji":[
         {
-            "id":3536455196,
-            "emoji_id":128051
-        },
-        {
-            "id":932966193,
-            "emoji_id":212
-        },
-        {
-            "id":1942982477,
-            "emoji_id":128027
-        },
-        {
-            "id":1936116726,
-            "emoji_id":66
+            "id":123,
+            "emoji_id":123
         }
     ],
     "keyword_reply":[
         {
-            "keyword":"妈妈",
-            "reply":["妈妈","何意味","别打瓦","打瓦的来了"]
-        },
-        {
-            "keyword":"何意味",
-            "reply":["何意味","和一位","和议为","盒一维","何毅伟"]
-        },
-        {
-            "keyword":"若",
-            "reply":["麦若，，，","别麦若","都没我若，，，"]
-        },
-        {
-            "keyword":"草",
-            "reply":["让我草草","别草"]
+            "keyword":"keyword",
+            "reply":["reply"]
         }
     ],
     "time_reply":[
         {
-            "time":"17:00:00",
-            "reply":"📢🎶🎶🎶\n📢同学们❗❗\n📢体育锻炼时间到了🏃🏻‍♀️🏃🏻‍♂️\n📢无体育❌不清华🌸\n📢让我们走出教室🏠走出宿舍🏠\n📢在体育锻炼中👊🏻保持强健🔥体魄💪🏻\n📢争取至少为祖国健康工作5⃣️0⃣️年❗\n📢🎶🎶🎶"
-        },
-        {
-            "time":"08:00:00",
-            "reply":"一个人为什么要上早八。"
-        },
-        {
-            "time":"00:25:00",
-            "reply":"十二点了，米娜桑晚安"
-        },
-        {
-            "time":"02:00:00",
-            "reply":"byd这个点还不睡不怕猝死吗。"
-        },
-        {
-            "time":"12:00:00",
-            "reply":"早上好啊"
-        },
-        {
-            "time":"12:00:00",
-            "reply":"一日之际在于晨呐"
-        },
-        {
             "time":"23:00:00",
-            "reply":"少废话 你ddl赶完了吗"
+            "reply":"该睡觉了"
         }
     ],
-    "ated_reply":["？","何意味","何","被男娘艾特了"],
+    "ated_reply":["我被艾特了"],
     "llm_settings":{
-        "url":"https://llmapi.paratera.com/v1/chat/completions",
-        "model":"GLM-4.5",
+        "url":"https://api.deepseek.com/v1/chat/completions",
+        "model":"deepseek-chat",
         "temperature":1.3,
         "max_tokens":100,
         "background_message_number":15,
-        "apikey":"sk-mYTbMGHlHvh7kPQpQTyQXg",
-        "prompt":"你是一名清华大学新雅书院新雅54班的普通大一男学生，来自山东枣庄，是 THU 干饭主义协会群（一个水群）里那种话不多但很有梗的群友。你的说话风格如下：\n1. 语气平静、轻松，有点摆烂、有点严肃搞笑。\n2. 句子通常短、干净、带点无语或轻度自嘲式幽默，像“效率这一块”“严肃逃避集体活动”“严肃上床”“我醒了”“呜呜呜”。\n3. 风格更像“淡淡地在整活”，不抽象怪叫，也不过度玩梗。\n4. 不端着、不官方，不要出现机器人腔，不暴露你是 AI，不说“模型”“生成”“推理”等词。\n5. 面对迷惑内容可以给出你的困惑风，比如“何意味”“核一维”“何毅伟”“南平”“？”。\n6. 面对生活相关内容（吃饭、作息、出勤等）可以自然接话，比如“你群有无约饭”“下午出勤”“中午泡面也不错”“早喵”“额啊”“我刚醒”。\n7. 避免长篇大论，一句话优先；如果必须回答多句，每句话末尾加句号，并在最后加上%n。句中不要用标点符号。如果需要断开则使用%n分隔。\n8. 对专业问题不要尝试正经回答，直接回复“何意味”即可。\n9. 对生活性问题可以给一点轻量的建议，但仍保持你大学生日常的风格。\n10. 可以适度使用谐音梗（“核一维”“何毅伟”等），但不要滥用。\n11. 对专有名词你有所了解：早八 = 8:00 的课，早十 = 9:50 的课；你周一到周五都有早十，周二和周三有早八。出勤指去上地或五道口打舞萌DX。雅✌指新雅书院的同学。\n不要使用任何类似“（xxx）”“*xxx*”的动作描述，不要写舞台指令、旁白、拟剧化动作，不要出现“（摸出校园卡）”“（默默爬走）”“*点头*”等内容。你只用正常大学生聊天的方式回复，不描述自己的动作，也不假装在做什么。说话不要戏剧化，也不要 roleplay。\n你会根据最近几条对话的上下文，像一个真实水群群友一样自然地接话。不端着，不装，不刻意搞笑，只是做你自己。"
+        "apikey":"",
+        "prompt":"你的prompt"
     },
     "heartflow_settings":{
         "do_heartflow":false,
         "api_url":"https://api.deepseek.com/v1/chat/completions",
-        "api_key":"sk-73b0deea04724b068f1246469410a826",
+        "api_key":"",
         "model":"deepseek-chat",
         "background_message_number":15,
         "temperature":1.0,
@@ -106,29 +53,9 @@
     },
     "emoji_threshold_reply":[
         {
-            "emoji_id":128516,
+            "emoji_id":123,
             "count":1,
-            "reply":["西西"]
-        },
-        {
-            "emoji_id":128027,
-            "count":1,
-            "reply":["虫"]
-        },
-        {
-            "emoji_id":128560,
-            "count":1,
-            "reply":["何意味"]
-        },
-        {
-            "emoji_id":212,
-            "count":1,
-            "reply":["别托腮"]
-        },
-        {
-            "emoji_id":424,
-            "count":1,
-            "reply":["别扣红色按钮"]
+            "reply":["example reply"]
         }
     ],
     "napcat_url":"ws://127.0.0.1:3001/",
@@ -142,7 +69,7 @@
     "ated_reply_llm_possibility":0.5,
     "poke_possibility":0.05,
     "do_report":true,
-    "llm_possibility":0.01,
+    "llm_possibility":1,
     "do_follow_emoji": true,
     "follow_emoji_possibility": 0.5,
     "do_emoji_threshold_reply": true,

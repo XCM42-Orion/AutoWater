@@ -1,5 +1,6 @@
 from message_utils import *
 import random
+from history import *
 from module import Module
 from event import *
 from logger import Logger
@@ -47,8 +48,7 @@ class FollowEmoji(NoticeModule):
             if random.random() <= config.follow_emoji_possibility:
                 if not self.emoji_replied.query((message_id,emoji_id)):
                     self.emoji_replied.insert((message_id,emoji_id))
-                    await message_handler.send_emoji_like(message_id,emoji_id)
-                    return True
+                    return await message_handler.send_emoji_like(message_id, emoji_id)
         return False
     def unregister(self):
         self.emoji_replied.dump()
@@ -90,8 +90,7 @@ class EmojiThreshold(NoticeModule):
                             self.emoji_counted_message.insert((message_id,emoji_id))
                             finalreply = random.choice(reply.get('reply'))
                             self.logger.info(f"消息{message_id}表情{emoji_id}达标")
-                            await message_handler.send_message(Message(finalreply),message.data.get('group_id'))
-                            return True
+                            return await message_handler.send_message(Message(finalreply),message.data.get('group_id'))
         return False
     
     def register(self, message_handler, event_handler, mod):
