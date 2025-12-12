@@ -216,8 +216,7 @@ class MessageHandler:
         await self.event_handler.dispatch_event(event, context)
 
     async def _send_message(self, event, context):
-        print(str(event.data[1]))
-        #await self.websocket.send(json.dumps(event.data[1].payload))
+        asyncio.create_task(self.websocket.send(json.dumps(event.data[1].payload)))
     
     async def _send_message_single_group(self, module: Module, text:str|Message, group_id: str|int,proxy=None):
         """发送消息到WebSocket"""
@@ -242,7 +241,7 @@ class MessageHandler:
         return True
     
     async def send_message(self, message:str|Message|Iterable, group_id:None|int|str|Iterable=None, proxy=None, module: Module = None):
-        if not isinstance(message, Iterable):
+        if not isinstance(message, List):
             message = [message]
 
         for text in message:
