@@ -107,6 +107,7 @@ class llm(Module):
             "Authorization": f"Bearer {self.config.llm_apikey}",
             "Content-Type": "application/json"
         }
+
         self.logger.info("开始调用LLM接口")
         try:
             async with aiohttp.ClientSession() as session:
