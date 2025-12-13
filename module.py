@@ -8,7 +8,8 @@ class Module:
         '''WARNING:__init__会被自动加载器无参数使用，若要重写__init__，务必保证无参数调用'''
     #注意，加载与卸载函数应该是非异步的
     def register(self, message_handler, event_handler, module_handler):
-        '''模块的初始化函数，是必须的，会被系统调用，若要重写，务必保证不要改变参数形式'''
+        '''模块的初始化函数，是必须的，会被系统调用，若要重写，务必保证不要改变参数形式。注意！为了保持listener行为的跟踪，请不要保存register中的handler，
+    此时应该从context中获取message_handler和event_handler'''
     
     def unregister(self):
         '''模块的卸载函数，不是必须的'''
@@ -38,6 +39,33 @@ class ModuleAttribute:
         #版本、作者等
         #TODO:暂未实现
 
+class DisposableEventHandlerWrapper:
+    def __init__(self, event_handler):
+        self.event_handler = event_handler
+        self.valid = True
+
+    def __getattr__(self, name):
+        if not self.valid:
+            raise RuntimeError("此EventHandler引用已结束生命周期，无法访问，请使用context中的event_handler访问event_handler")
+        return getattr(self.event_handler, name)
+    
+    def dispose(self):
+        self.valid = False
+
+class DisposableMessageHandlerWrapper:
+    def __init__(self, message_handler):
+        self.message_handler = message_handler
+        self.valid = True
+
+    def __getattr__(self, name):
+        if not self.valid:
+            raise RuntimeError("此MessageHandler引用已结束生命周期，无法访问，请使用context中的message_handler访问message_handler")
+        return getattr(self.message_handler, name)
+    
+    def dispose(self):
+        self.valid = False
+
+    
     
 class ModuleHandler:
     def __init__(self):
@@ -114,10 +142,16 @@ class ModuleHandler:
             module_instance = self.modules_by_name[class_name]
             self.logger.debug('模块' + class_name + '已加载')
             # 模块的初始化
-            module_instance.register(message_handler, message_handler.event_handler, self)
+            message_handler_wrapper = DisposableMessageHandlerWrapper(message_handler)
+            event_handler_wrapper = DisposableEventHandlerWrapper(message_handler.event_handler)
+            module_instance.register(message_handler_wrapper, event_handler_wrapper, self)
+            message_handler_wrapper.dispose()
+            event_handler_wrapper.dispose()
+            del message_handler_wrapper
+            del event_handler_wrapper
             # 将模块加入module管理器
             attribute = ModuleAttribute()
-            attribute.resigter_name = class_name
+            attribute.register_name = class_name
             self.register_module(module_instance, attribute)
             self.loaded_modules.add(class_name)
 

@@ -1,3 +1,6 @@
 data/
 __pycache__/
 module_list/__pycache__/
+config.json
+fingerprint.pickle
+cookies.json

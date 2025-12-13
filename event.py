@@ -8,7 +8,7 @@ class EventType(Enum):
     EVENT_RECV_MSG = 1         #data : Message
     EVENT_SEND_MSG = 2         #data : tuple[EventContext(Proxy),Message]
     EVENT_NOTICE_MSG = 3
-    EVENT_NEW_THREAD = 4       #如果module中的创建新线程中，则需要申请一个context来沟通，此时新线程的开始将被视为一个事件
+    SPECIAL_APPLY_CONTEXT = 4       #如果module中需要申请一个context来沟通，此context中的操作仍然将被视为一个事件
 
 import asyncio
 from collections import defaultdict
@@ -218,7 +218,6 @@ class EventHandler:
         # 存储协程任务
         self.tasks: List[asyncio.Task] = []
         self.message_handler = message_handler
-        self.event_context_proxy = Dict[str, EventContextProxy]
     
     def _inner_register_listener(self, module: Module, event_type: EventType, callback: Callable, priority: int):
         """注册监听器，可以指定优先级"""
@@ -266,6 +265,21 @@ class EventHandler:
             return False
         else:
             return False
+        
+    def apply_for_context(self, module: Module) -> EventContext:
+        """申请一个context供module使用，此context内的所有操作都会被记录为SPECIAL_APPLY_CONTEXT"""
+        context = EventContext()
+        context.message_handler = self.message_handler
+        context.event_handler = self
+        context.mod = self.message_handler.module_handler
+        context.owner = type(module).__name__
+        context.log = self.message_handler.logger
+
+        event = Event(EventType.SPECIAL_APPLY_CONTEXT,None)
+
+        proxy = EventContextProxy(module, context, event)
+
+        return proxy
     
     async def dispatch_event(self, event: Event, real_context: EventContext):
         event_type = event.event_type

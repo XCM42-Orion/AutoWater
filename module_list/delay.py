@@ -20,10 +20,9 @@ class delay(Module):
 
         message = str(target_context.event.data)
         reply = str(event.data[1])
-        
 
         classname = type(target_context.module).__name__
-        if classname == 'Repeat' or classname == 'Poke' or classname == 'Emoji' or classname == 'RandomAt' or classname == 'FollowEmoji' or classname == '':
+        if classname == 'Repeat' or classname == 'Poke' or classname == 'Emoji' or classname == 'RandomAt' or classname == 'FollowEmoji':
             await asyncio.sleep(self.constant_delay(3))
         elif classname == 'RandomReply' or classname == 'RandomAt' or classname == 'KeywordReply' or classname == 'LLMReply':
             await asyncio.sleep(self.standard_delay(message, reply))

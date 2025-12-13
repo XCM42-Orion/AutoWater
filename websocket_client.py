@@ -47,12 +47,10 @@ class WebSocketClient:
                     asyncio.create_task(self.message_handler.dispatch_event(EventType.EVENT_INIT, None))
                     self.logger.debug("Autowater 启动完成。")
                     # 运行消息处理
-                    await asyncio.gather(
-                        self._handle_messages(ws)
-                    )
+                    await self._handle_messages(ws)
                     break
             except Exception as e:
-                self.logger.error(f"WebSocket连接错误: [{e}] Autowater将在 5 秒后尝试重新连接...")
+                self.logger.error(f"WebSocket连接错误: {e}，正在尝试重新连接...")
                 await asyncio.sleep(5)
                 continue
     
@@ -60,4 +58,4 @@ class WebSocketClient:
         """处理WebSocket消息"""
         async for message in ws:
                 data = json.loads(message)
-                await self.message_handler.process_message(data)
+                asyncio.create_task(self.message_handler.process_message(data))
