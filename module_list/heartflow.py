@@ -3,7 +3,7 @@ import aiohttp
 import json
 import random
 from module import *
-import config
+from config import config
 import logger
 
 class heartflow(Module):

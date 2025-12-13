@@ -283,6 +283,7 @@ def scan_module():
     module_instances = {}
     module_classes = {}
     base_module_path = Path(__file__).parent / "module_list"
+    base_plugin_path = Path(__file__).parent / "plugins"
     
     def is_module_subclass(cls):
         """检查类是否是Module的子类且不是Module本身"""
@@ -296,8 +297,12 @@ def scan_module():
     def import_module_from_file(file_path):
         """从文件路径导入模块"""
         # 将文件路径转换为模块名
-        rel_path = file_path.relative_to(base_module_path)
-        module_name = str(rel_path).replace(os.path.sep, '.').replace('.py', '')
+        if "module_list" in str(file_path):
+            rel_path = file_path.relative_to(base_module_path)
+            module_name = "module." + str(rel_path).replace(os.path.sep, '.').replace('.py', '')
+        else:
+            rel_path = file_path.relative_to(base_plugin_path)
+            module_name = "plugin." + str(rel_path).replace(os.path.sep, '.').replace('.py', '')
         
         # 如果模块已经被导入过，直接返回
         if module_name in sys.modules:
@@ -323,6 +328,11 @@ def scan_module():
     # 扫描所有.py文件
     py_files = []
     for root, dirs, files in os.walk(base_module_path):
+        for file in files:
+            if file.endswith('.py') and not file.startswith('__'):
+                py_files.append(Path(root) / file)
+    
+    for root, dirs, files in os.walk(base_plugin_path):
         for file in files:
             if file.endswith('.py') and not file.startswith('__'):
                 py_files.append(Path(root) / file)
