@@ -23,7 +23,8 @@ class Repeat(MessageModule):
         if str(message) == self.last_message:
             self.repeat_count += 1
             if random.random() <= config.repeat_possibility and self.repeat_count == 1:
-                Logger.info(f"触发复读：{message}")
+                logger = Logger()
+                logger.info(f"触发复读：{message}")
                 return await message_handler.send_message(Message(message),message.data.get('group_id'))
         else:
             self.last_message = str(message)
@@ -32,9 +33,11 @@ class Repeat(MessageModule):
         return False
     
     def register(self, message_handler, event_handler, module_handler):
-        super().register(message_handler, event_handler, module_handler)
+        module_handler.config.register_config('repeat_possibility', module=self)
+
         self.last_message = ''
         self.repeat_count = 0
+        super().register(message_handler, event_handler, module_handler)
 
 class RandomReply(MessageModule):
     async def on_recv_msg(self, event, context):
@@ -48,9 +51,16 @@ class RandomReply(MessageModule):
             return False
         
         reply_message = Message(random.choice(config.random_reply))
-
-        Logger.info(f"触发随机回复：{reply_message}")
+        logger = Logger()
+        logger.info(f"触发随机回复：{reply_message}")
         return await message_handler.send_message(reply_message,message.data.get('group_id'))
+    
+
+    def register(self, message_handler, event_handler, module_handler):
+        module_handler.config.register_config('random_reply', module=self)
+        module_handler.config.register_config('random_reply_possibility', module=self)
+
+        super().register(message_handler, event_handler, module_handler)
     
 
 
@@ -101,6 +111,11 @@ class AtReply(MessageModule):
             
             return False
         return False
+    def register(self, message_handler, event_handler, module_handler):
+        module_handler.config.register_config('ated_reply_possibility', module=self)
+        module_handler.config.register_config('ated_reply', module=self)
+        module_handler.config.register_config('llm_possibility', module=self)
+        super().register(message_handler, event_handler, module_handler)
     
 
 class Poke(MessageModule):
@@ -114,6 +129,10 @@ class Poke(MessageModule):
         if random.random() <= config.poke_possibility:
             return await message_handler.send_poke(message.user_id)
         return False
+    
+    def register(self, message_handler, event_handler, module_handler):
+        module_handler.config.register_config('poke_possibility', module=self)
+        super().register(message_handler, event_handler, module_handler)
         
 ##################
 
@@ -132,9 +151,15 @@ class KeywordReply(MessageModule):
         
         for keyword_item in config.keyword_reply:
             if keyword_item['keyword'] in str(message):
-                Logger.info(f"触发关键词回复：{keyword_item['keyword']} -> {keyword_item['reply']}")
+                logger = Logger()
+                logger.info(f"触发关键词回复：{keyword_item['keyword']} -> {keyword_item['reply']}")
                 return message_handler.send_message(Message(random.choice(keyword_item['reply']),message.data.get('group_id')))
         return False
+    
+    def register(self, message_handler, event_handler, module_handler):
+        module_handler.config.register_config('keyword_reply', module=self)
+        module_handler.config.register_config('keyword_possibility', module=self)
+        super().register(message_handler, event_handler, module_handler)
     
 
 class SpecialReply(MessageModule):
@@ -146,16 +171,23 @@ class SpecialReply(MessageModule):
 
 
 
-        if not config.set_reply or random.random() > config.set_reply_possiblity:
+        if not config.set_reply or random.random() > config.set_reply_possibility:
             return False
         
         for special_user in config.set_reply:
             reply = ''
             if message.user_id == special_user['id']:
                 reply = [('reply',message.message_id),special_user['reply']]
-                Logger.info(f"触发特殊用户回复：{special_user['id']} -> {special_user['reply']}")
+                logger = Logger()
+                logger.info(f"触发特殊用户回复：{special_user['id']} -> {special_user['reply']}")
                 return await message_handler.send_message(Message(reply),message.data.get('group_id'))
         return False
+    
+    
+    def register(self, message_handler, event_handler, module_handler):
+        module_handler.config.register_config('set_reply', module=self)
+        module_handler.config.register_config('set_reply_possibility', module=self)
+        super().register(message_handler, event_handler, module_handler)
     
 
 
@@ -175,6 +207,11 @@ class Emoji(MessageModule):
                 return await message_handler.send_emoji_like(message.message_id,emoji_user['emoji_id'])
         return False
     
+    def register(self, message_handler, event_handler, module_handler):
+        module_handler.config.register_config('set_emoji', module=self)
+        module_handler.config.register_config('emoji_possibility', module=self)
+        super().register(message_handler, event_handler, module_handler)
+    
 
 
 
@@ -189,9 +226,14 @@ class RandomAt(MessageModule):
         reply = ''
         if random.random() <= config.at_possibility:
             reply = [("reply",message.message_id),("at",message.user_id)]
-            Logger.info(f"触发随机艾特：@{message.user_id}")
+            logger = Logger()
+            logger.info(f"触发随机艾特：@{message.user_id}")
             return await message_handler.send_message(Message(reply),message.data.get('group_id'))
         return False
+    
+    def register(self, message_handler, event_handler, module_handler):
+        module_handler.config.register_config('at_possibility', module=self)
+        super().register(message_handler, event_handler, module_handler)
     
 
 class LLMReply(MessageModule):
@@ -224,3 +266,9 @@ class LLMReply(MessageModule):
                 reply = [line.strip()]
             send_list.append(Message(reply))
         return await message_handler.send_message(send_list)
+    
+    def register(self, message_handler, event_handler, module_handler):
+        module_handler.config.register_config('llm_possibility', module=self)
+        module_handler.config.register_config('heartflow_do_heartflow','heartflow_settings.do_heartflow', module=self)
+        super().register(message_handler, event_handler, 
+                         module_handler)

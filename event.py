@@ -1,6 +1,7 @@
 from module import *
 from message_utils import *
 from enum import Enum
+import logger
 
 class EventType(Enum):
     EVENT_UNDEFINED = -1       #data : Any
@@ -332,7 +333,7 @@ class EventHandler:
 
             # 等待同一优先级的全部监听器执行完成
             if tasks:
-                results = await asyncio.gather(*tasks, return_exceptions=True)
+                results = await asyncio.gather(*tasks, return_exceptions=not logger.debug_flag)
                 
                 # 处理执行结果中的异常
                 for i, result in enumerate(results):
@@ -340,7 +341,7 @@ class EventHandler:
                     event.history.extend(context.dump_history())
                     if isinstance(result, Exception):
                         #这里不要使用mod.get_classname_by_instance，因为context已经被销毁。注意,context在对应listener执行完会被立刻销毁，只能在用户的module内使用
-                        print(f"Listener {type(listeners[i].module).__name__} failed with error: {result}")
+                        print(f"Listener {type(listeners[i].module).__name__} failed with error {type(result)}: {result}")
                 
                 #清理已完成的任务
                 for task in tasks:

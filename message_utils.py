@@ -5,6 +5,7 @@ from collections.abc import Iterable
 import random
 from module import *
 from event import *
+import logger
 from logger import Logger
 
 
@@ -32,13 +33,13 @@ class MessageComponent:
 
     def __str__(self):
         if self.type == 'reply':
-            return '回复信息id' + str(self.data)   #data->message_id
+            return '[回复信息id' + str(self.data) + ']'   #data->message_id
         elif self.type == 'image':
             return '[图片]'
         elif self.type == 'text':                 #data->str
             return self.data
         elif self.type == 'at':                   #data->qq_id
-            return '@' + str(self.data)
+            return '[@' + str(self.data) + ']'
             
 
 
@@ -176,18 +177,19 @@ class SystemModule(Module):
 
 # 修改 MessageHandler 以使用优先级系统
 class MessageHandler:
-    def __init__(self, websocket, module_handler):
+    def __init__(self, websocket, module_handler, target_groups):
         #self.config = config
         #self.llm_service = LLMService(config)
         # 使用新的优先级监听器系统
         self.event_handler = EventHandler(self)
         self.websocket = websocket
-        self.group_ids = list()
+        self.group_ids = target_groups
         self.self_id = str()
         self.messages = dict()
         self.event_handler = EventHandler(self)
         self.module_handler = module_handler
         self.logger = Logger()
+        self.target_groups = target_groups
         self.message_history = list()
 
         #发送信息时，以0优先级调用发送
@@ -195,7 +197,7 @@ class MessageHandler:
         self.register_listener(self.system_module, EventType.EVENT_SEND_MSG, self._send_message)
 
     def start_message_handler(self):
-        self.group_ids = self.module_handler.config.target_groups
+        pass
     
     def register_listener(self, module: Module, event_type: EventType, listener: Callable, priority: int = 0):
         """注册监听器（封装方法）"""
@@ -209,6 +211,7 @@ class MessageHandler:
         context = EventContext()
 
         context.message_handler = self
+        context.event_handler = self.event_handler
         context.mod = self.module_handler
 
         event = Event(event_type, data)
@@ -216,7 +219,11 @@ class MessageHandler:
         await self.event_handler.dispatch_event(event, context)
 
     async def _send_message(self, event, context):
-        asyncio.create_task(self.websocket.send(json.dumps(event.data[1].payload)))
+        if logger.debug_flag:
+            self.logger.debug("发送信息:" + str(event.data[1]))
+            self.logger.warning("注意，现在debug_flag=True，消息发送已被拦截。若要启动消息发送，请在logger.py修改debug_flag为False")
+        else:
+            asyncio.create_task(self.websocket.send(json.dumps(event.data[1].payload)))
     
     async def _send_message_single_group(self, module: Module, text:str|Message, group_id: str|int,proxy=None):
         """发送消息到WebSocket"""
@@ -282,7 +289,8 @@ class MessageHandler:
     
     async def process_message(self, data):
         """处理收到的消息"""
-        if (data.get("post_type") == "message" and data.get("message_type") == "group") or data.get("post_type") == "notice":       
+        accept_message_type = ['message'] if not logger.debug_flag else ['message', 'message_sent']
+        if (data.get("post_type") in accept_message_type and data.get("message_type") == "group") or data.get("post_type") == "notice":       
             group_id = data.get("group_id")
             if group_id not in self.group_ids:
                 return
@@ -299,7 +307,7 @@ class MessageHandler:
             message = Message(user_id, message_id, nickname, data)
             self.messages[message_id] = message
             # 事件广播
-            if data.get("post_type") == "message":
+            if data.get("post_type") in accept_message_type:
                 #先打印日志，后分发事件，以免delay模块造成阻塞，影响用户体验
                 self.logger.info(f"[\033[34m消息\033[0m][\033[34m群聊\033[0m][{data.get('group_name')}({group_id})]{nickname}({user_id})：{message}")
                 await self.dispatch_event(EventType.EVENT_RECV_MSG, message)

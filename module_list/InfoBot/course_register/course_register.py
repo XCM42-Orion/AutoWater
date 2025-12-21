@@ -3,7 +3,7 @@ import html
 import json
 
 from ..login import *
-
+'''
 class InfoBotCourseRegisterWrapper:
 
 
@@ -25,4 +25,4 @@ class InfoBotCourseRegisterWrapper:
             p_skxq: dayOfWeek ?? "",
             p_skjc: period ?? "",
             goPageNumber: page ?? 1,
-        }, "GBK")
+        }, "GBK")'''

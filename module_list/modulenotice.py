@@ -21,6 +21,12 @@ class FollowEmoji(NoticeModule):
     def register(self, message_handler, event_handler, mod):
         self.emoji_replied = mod.historyhandler.HistoryHandler(cache_path='data/emoji_replied')
         self.emoji_replied.load()
+
+        config = mod.config
+
+        config.register_config('follow_emoji', 'do_follow_emoji', module=self)
+        config.register_config('follow_emoji_possibility', module=self)
+
         message_handler.register_listener(self, EventType.EVENT_NOTICE_MSG, self.on_notice_msg)
 
     async def on_notice_msg(self, event, event_context):
@@ -96,6 +102,13 @@ class EmojiThreshold(NoticeModule):
     def register(self, message_handler, event_handler, mod):
         self.emoji_counted_message = mod.historyhandler.HistoryHandler(cache_path='data/emoji_message')
         self.emoji_counted_message.load()
+
+        config = mod.config
+
+        config.register_config('emoji_threshold_reply', module=self)
+        config.register_config('emoji_threshold_reply_possibility', module=self)
+        config.register_config('do_emoji_threshold_reply', module=self)
+
         message_handler.register_listener(self, EventType.EVENT_NOTICE_MSG, self.on_notice_msg)
 
     def unregister(self):

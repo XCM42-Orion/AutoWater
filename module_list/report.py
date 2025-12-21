@@ -5,11 +5,17 @@ from message_utils import *
 from logger import Logger
 
 class ReportService(Module):
+    prerequisite = ['config']
+
     def __init__(self):
         pass
     
     def register(self,message_handler,event_handler,module_handler):
         message_handler.register_listener(self, EventType.EVENT_INIT, self.run)
+        module_handler.config.register_config('time_reply', module=self)
+        module_handler.config.register_config('do_report', module=self)
+
+
     async def run(self, event, context):
         self.config = context.mod.config
         """运行自动播报"""

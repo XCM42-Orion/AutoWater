@@ -2,17 +2,16 @@ import asyncio
 import json
 from websocket_client import WebSocketClient
 from logger import Logger
-
-
 async def main():
     # 加载配置
     with open('config.json', "r", encoding='utf-8') as f:
             config = json.load(f)
 
     napcat_url = config.get('napcat_url')
+    target_groups = config.get('target_groups')
     
     # 创建WebSocket客户端
-    client = WebSocketClient(napcat_url)
+    client = WebSocketClient(napcat_url, target_groups)
     
     # 连接并运行
     Logger().debug("Autowater已启动，正在连接WebSocket...")

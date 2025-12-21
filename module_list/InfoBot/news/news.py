@@ -93,7 +93,8 @@ class InfoBotNewsWrapper:
 
 
                             soup = BeautifulSoup(html, 'html.parser')
-                            title_element = soup.select_one(selected_policy[0])
+                            if selected_policy[0] != "":
+                                title_element = soup.select_one(selected_policy[0])
                             content_element = soup.select_one(selected_policy[1])
                             if content_element:
                                 content_text += content_element.get_text(strip=True)

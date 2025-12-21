@@ -3,6 +3,7 @@ from collections import deque
 from datetime import datetime
 from module import *
 from typing import *
+from event import *
 from logger import Logger
 
 import json
@@ -30,6 +31,22 @@ class llm(Module):
 
     def register(self, message_handler, event_handler, mod):
         self.config = mod.config
+
+        self.config.register_config('background_message_number', 'llm_settings.background_message_number', module=self)
+        self.config.register_config('llm_url', 'llm_settings.url', module=self)
+        self.config.register_config('llm_model', 'llm_settings.model', module=self)
+        self.config.register_config('llm_apikey', 'llm_settings.apikey', module=self)
+        self.config.register_config('llm_temperature', 'llm_settings.temperature', module=self)
+        self.config.register_config('llm_max_tokens', 'llm_settings.max_tokens', module=self)
+        self.config.register_config('llm_prompt', 'llm_settings.prompt', module=self)
+    
+        message_handler.register_listener(self, EventType.EVENT_INIT, self.on_init)
+        self.recent_messages = None
+
+        
+
+
+    async def on_init(self, event, context):
         self.recent_messages = deque(maxlen=self.config.background_message_number)
     
     def add_message_to_history(self, user_id, sender, text):
@@ -107,7 +124,6 @@ class llm(Module):
             "Authorization": f"Bearer {self.config.llm_apikey}",
             "Content-Type": "application/json"
         }
-
         self.logger.info("开始调用LLM接口")
         try:
             async with aiohttp.ClientSession() as session:

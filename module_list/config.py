@@ -1,13 +1,194 @@
 from module import Module
+import logger
 import json
+from event import *
 
+class configInfo:
+    def __init__(self, name, path, module, type, default):
+        self.type = type
+        self.name = name
+        self.path = path
+        self.data = None
+        self.default = None
+        self.module = module
 
 class config(Module):
-    #, config_path="config.json"
+
     def __init__(self):
+        self.registered_config = []
+        self.raw_config = None
+        self.load_succeeded = False
+        self.name_list = []
+        
+        self.register_config('target_groups')
+        self.register_config('napcat_url')
+
+        
+
+    def load_config(self):
         config_path="config.json"
         with open(config_path, "r", encoding='utf-8') as f:
-            config = json.load(f)
+            try:
+                self.raw_config = json.load(f)
+                self.load_succeeded = True
+            except json.JSONDecodeError as e:
+                log = logger.Logger()
+                log.warning(f"未能成功读取config.json:{e}，请检查是否存在语法错误")
+                
+                    
+
+        for info in self.registered_config:
+            path = info.path
+            temp = self.raw_config
+
+            sessions = path.split('.')
+            succeed = True
+
+            if len(sessions) == 1:
+                try:
+                    setattr(self, info.name, temp[sessions[0]])
+                    self.name_list.append(info.name)
+                except Exception as e:
+                    log = logger.Logger()
+                    log.warning(f"config'{info.name}'未能在'{info.path}'位置找到，已设置为默认值{str(info.default)}，将在稍后写入config.json")
+                    setattr(self, info.name, info.default)
+
+            for session in sessions[:-1]:
+                try:
+                    temp = temp[session]
+                except:
+                    log = logger.Logger()
+                    log.warning(f"config'{info.name}'未能在'{info.path}'位置找到，已设置为默认值{str(info.default)}，将在稍后写入config.json")
+                    setattr(self, info.name, info.default)
+                    succeed = False
+                    break
+
+            if succeed:
+                try:
+                    setattr(self, info.name, temp[sessions[-1]])
+                    self.name_list.append(info.name)
+                except Exception as e:
+                    log = logger.Logger()
+                    log.warning(f"config'{info.name}'未能在'{info.path}'位置找到，已设置为默认值{str(info.default)}，将在稍后写入config.json")
+                    
+                    setattr(self, info.name, info.default)
+
+    def __setattr__(self, name, value):
+        if name != 'registered_config' and name != 'raw_config' and name != 'name_list':
+            #self.set_config(name, value)
+            pass
+        return super().__setattr__(name, value)
+
+    def update_config_value(self, name, value):
+        """更新单个配置值"""
+        #这是留给webui的接口
+        try:
+            # 获取配置项信息
+            config_info = None
+            for info in self.registered_config:
+                if info.name == name:
+                    config_info = info
+                    break
+            
+            if not config_info:
+                raise ValueError(f"配置项 {name} 未注册")
+            
+            # 根据类型转换值
+            if config_info.type:
+                if config_info.type == int:
+                    value = int(value)
+                elif config_info.type == float:
+                    value = float(value)
+                elif config_info.type == bool:
+                    if isinstance(value, str):
+                        value = value.lower() in ('true', '1', 'yes', 'y')
+                    else:
+                        value = bool(value)
+                elif config_info.type == list:
+                    if isinstance(value, str):
+                        # 尝试解析JSON列表
+                        try:
+                            import json
+                            value = json.loads(value)
+                        except:
+                            # 如果是逗号分隔的字符串
+                            value = [v.strip() for v in value.split(',') if v.strip()]
+            
+            # 更新值
+            setattr(self, name, value)
+            
+            # 保存到文件
+            self.dump_config()
+            
+            return True
+        except Exception as e:
+            raise e
+            return False
+
+    def get_config(self, name=None):
+        if name == None:
+            return self.raw_config
+        else:
+            return self.__getattribute__(name)
+
+    def get_registered_configs(self):
+        """获取所有注册的配置项信息，按模块分组"""
+        module_configs = {}
+        
+        for info in self.registered_config:
+            module_name = info.module.__class__.__name__ if info.module else "global"
+            
+            if module_name not in module_configs:
+                module_configs[module_name] = []
+            
+            # 获取当前值
+            current_value = getattr(self, info.name, info.default)
+            
+            module_configs[module_name].append({
+                'name': info.name,
+                'path': info.path,
+                'type': info.type.__name__ if info.type else type(current_value).__name__,
+                'default': info.default,
+                'current': current_value,
+                'description': getattr(info, 'description', '')
+            })
+        
+        return module_configs
+    
+    def dump_config(self):
+        if not self.load_succeeded:
+            return
+
+
+        config_path="config.json"
+
+        with open(config_path, "r", encoding='utf-8') as f:
+            self.raw_config = json.load(f)
+
+        for info in self.registered_config:
+            path = info.path
+            temp = self.raw_config
+
+            info.data = self.__getattribute__(info.name)
+
+            sessions = path.split('.')
+
+            if len(sessions) == 1:
+                self.raw_config[sessions[0]] = info.data
+            
+            else:
+                temp = self.raw_config
+                for session in sessions[:-1]:
+                    temp = temp.setdefault(session, {})
+                    
+                temp[sessions[-1]] = info.data
+
+        with open(config_path, "w", encoding='utf-8') as f:
+            f.write(json.dumps(self.raw_config, indent=4, ensure_ascii=False))
+
+    '''
+
+            
         
         # WebSocket 配置
         self.napcat_url = config.get('napcat_url')
@@ -25,7 +206,7 @@ class config(Module):
         self.set_reply_possiblity = config.get("set_reply_possiblity", 0)
         self.emoji_possibility = config.get("emoji_possibility", 0)
         self.random_reply_possibility = config.get("random_reply_possibility", 0)
-        self.repeat_possibility = config.get("repeat_possibility", 0)
+self.repeat_possibility = config.get("repeat_possibility", 0)
         self.at_possibility = config.get("at_possibility", 0)
         self.ated_reply_possibility = config.get("ated_reply_possibility", 0)
         self.poke_possibility = config.get("poke_possibility", 0)
@@ -65,4 +246,41 @@ class config(Module):
         #贴表情自动回复配置
         self.do_emoji_threshold_reply = config.get("do_emoji_threshold_reply", False)
         self.emoji_threshold_reply = config.get("emoji_threshold_reply", [])
-        self.emoji_threshold_reply_possibility = config.get("emoji_threshold_reply_possibility", 0)
+        self.emoji_threshold_reply_possibility = config.get("emoji_threshold_reply_possibility", 0)'''
+
+    def register_config(self, name, path='', module=None, default=None,type=None):
+        if name in self.name_list:
+            return
+
+
+        if default == None:
+            if type == list:
+                default = []
+            elif type == float:
+                default = float(0.0)
+            elif type == int:
+                default = 0
+            elif type == str:
+                default = ""
+            elif type == dict:
+                default = {}
+            elif type == bool:
+                default = False
+
+        if path == '':
+            path = name
+
+
+        config_info = configInfo(name, path, module, type, default)
+        config_info.default = default
+
+        self.registered_config.append(config_info)
+
+    async def run(self, event, context):
+        self.load_config()
+
+    def register(self, message_handler, event_handler, mod):
+        message_handler.register_listener(self, EventType.EVENT_INIT, self.run, 100)
+
+    def unregister(self):
+        self.dump_config()

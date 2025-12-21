@@ -392,7 +392,7 @@ class InfoBotCore(Module):
     def register(self, message_handler, event_handler, mod):
         self.config = mod.config
         self.context = event_handler.apply_for_context(self)
-        self.infosession = InfoSession('账号','密码')#(self.config.username, self.config.password)
+        self.infosession = InfoSession('','')#(self.config.username, self.config.password)
 
         self.infosession.login()
 

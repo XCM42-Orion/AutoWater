@@ -6,11 +6,13 @@ import module
 import signal
 from typing import *
 from logger import Logger
+import logger
 
 class WebSocketClient:
-    def __init__(self, url):
+    def __init__(self, url, target_groups):
 
         self.url = url
+        self.target_groups = target_groups
         self.module_handler = module.ModuleHandler()
         self.message_handler = None
         self.logger = Logger()
@@ -39,7 +41,7 @@ class WebSocketClient:
                 ) as ws:
                     self.logger.debug("Napcat WebSocket 已连接")
 
-                    self.message_handler = MessageHandler(ws, self.module_handler)
+                    self.message_handler = MessageHandler(ws, self.module_handler, self.target_groups)
                     self.module_init()
                     self.logger.debug("模块初始化完成")
                     self.message_handler.start_message_handler()
@@ -50,6 +52,9 @@ class WebSocketClient:
                     await self._handle_messages(ws)
                     break
             except Exception as e:
+                if logger.debug_flag:
+                    raise e
+
                 self.logger.error(f"WebSocket连接错误: {e}，正在尝试重新连接...")
                 await asyncio.sleep(5)
                 continue

@@ -15,6 +15,20 @@ class heartflow(Module):
 
     def register(self, message_handler, event_handler, mod):
         self.config = mod.config
+
+        self.config.register_config('heartflow_api_url','heartflow_settings.api_url', module=self)
+        self.config.register_config('heartflow_api_key','heartflow_settings.api_key', module=self)
+        self.config.register_config('heartflow_model','heartflow_settings.model', module=self)
+        self.config.register_config('heartflow_background_message_number','heartflow_settings.background_message_number', module=self)
+        self.config.register_config('heartflow_temperature','heartflow_settings.temperature', module=self)
+        self.config.register_config('heartflow_willing_weight','heartflow_settings.willing_weight', module=self)
+        self.config.register_config('heartflow_context_weight','heartflow_settings.context_weight', module=self)
+        self.config.register_config('heartflow_random_weight','heartflow_settings.random_weight', module=self)
+        self.config.register_config('heartflow_reply_threshold','heartflow_settings.reply_threshold', module=self)
+        self.recent_messages = None
+        
+
+    async def on_init(self, event, context):
         self.recent_messages = deque(maxlen=self.config.heartflow_background_message_number)
     
     def add_message_to_history(self, user_id, sender, text):
