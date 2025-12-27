@@ -6,6 +6,7 @@ import module
 import signal
 from typing import *
 from logger import Logger
+import os
 import logger
 
 class WebSocketClient:
@@ -22,7 +23,7 @@ class WebSocketClient:
 
     def exit_handler(self,signum, frame):
         self.module_handler.unload_all()
-        exit(0)
+        os._exit(0)
 
     def module_init(self):
         # 获取所有模块

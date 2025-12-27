@@ -6,10 +6,12 @@ from flask import Flask, render_template, request, jsonify
 import json
 import os
 
+import threading
+
 
 
 class FlaskApp:
-    def __init__(self, config_manager):
+    def __init__(self, config_manager, module_manager):
         
         module_dir = os.path.dirname(os.path.abspath(__file__))
         self.app = Flask(
@@ -19,8 +21,9 @@ class FlaskApp:
         instance_path=module_dir
         )
 
-        # 初始化配置管理器
+        # 初始化管理器
         self.config_manager = config_manager
+        self.module_manager = module_manager
 
         self.register_routes()
         self.run()
@@ -30,7 +33,14 @@ class FlaskApp:
         @self.app.route('/')
         def index():
             """显示配置管理页面"""
-            return render_template('index.html', 
+            return render_template('config.html', 
+                                app_config=self.config_manager.get_config(),
+                                config_json=json.dumps(self.config_manager.get_config(), indent=2))
+        
+        @self.app.route('/module')
+        def module():
+            """显示配置管理页面"""
+            return render_template('module.html', 
                                 app_config=self.config_manager.get_config(),
                                 config_json=json.dumps(self.config_manager.get_config(), indent=2))
 
@@ -135,8 +145,8 @@ class FlaskApp:
                     'message': f'获取配置项失败: {str(e)}'
                 }), 500
             
-        @self.app.route('/api/modules')
-        def get_modules():
+        @self.app.route('/api/modules_config')
+        def get_modules_config_version():
             """获取所有模块的配置信息"""
             try:
                 configs = self.config_manager.get_registered_configs()
@@ -150,6 +160,32 @@ class FlaskApp:
                         'name': module_name,
                         'display_name': module_name,
                         'item_count': item_count
+                    })
+                
+                return jsonify({
+                    'success': True,
+                    'modules': modules
+                })
+            except Exception as e:
+                return jsonify({
+                    'success': False,
+                    'message': f'获取模块列表失败: {str(e)}'
+                }), 500
+            
+        @self.app.route('/api/modules_module')
+        def get_modules_module_version():
+            """获取所有模块的模块信息"""
+            try:
+                # 获取模块列表
+                module_set = self.module_manager.get_all_modules()
+
+                modules = []
+                
+                for module in module_set:
+                    # 统计该模块的配置项数量
+                    modules.append({
+                        'name': module,
+                        'display_name': module
                     })
                 
                 return jsonify({
@@ -239,5 +275,9 @@ class FlaskApp:
         #print(f"启动应用: {self.config_manager.get_value('self.app_name')}")
         #print(f"访问地址: http://{host}:{port}")
         #print(f"调试模式: {debug}")
+
+        flask_thread = threading.Thread(target=self.app.run, kwargs={'host':host, 'port':port, 'debug':debug})
+        flask_thread.daemon = True  # 设置为守护线程，这样当主线程退出时，Flask线程也会退出
+        flask_thread.start()
         
-        self.app.run(host=host, port=port, debug=debug)
+        #self.app.run(host=host, port=port, debug=debug)

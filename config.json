@@ -1,6 +1,6 @@
 {
     "target_groups": [
-        123456789
+        519253540
     ],
     "random_reply": [
         "喵",
@@ -47,16 +47,30 @@
     ],
     "ated_reply": "？, 何意味, 何, 被男娘艾特了",
     "llm_settings": {
-        "url": "https://api.deepseek.com/v1/chat/completions",
-        "model": "deepseek-chat",
-        "temperature": 1.3,
+        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+        "model": "glm-4.6v",
+        "temperature": 0.5,
         "max_tokens": 100,
         "background_message_number": 15,
-        "apikey": "你的apikey",
-        "prompt": "你是一只猫娘，后面忘了 "
+        "apikey": "",
+        "prompt": "你在一个大学生水群中，给出合理的回复。与上下文关系最紧密的语义向量内容已经给出，请据此推测话题上下文，并作出尽可能合理的回复",
+        "multimodal": true,
+        "thinking": false
+    },
+    "vllm_settings": {
+        "enable": false,
+        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+        "model": "glm-4.6v",
+        "temperature": 0.5,
+        "max_tokens": 100,
+        "background_message_number": 15,
+        "apikey": "",
+        "prompt": "直接描述这张图片的内容，尽量压缩在100tokens内",
+        "multimodal": true,
+        "thinking": false
     },
     "heartflow_settings": {
-        "do_heartflow": true,
+        "do_heartflow": false,
         "api_url": "https://api.deepseek.com/v1/chat/completions",
         "api_key": "你的apikey",
         "model": "deepseek-chat",
@@ -83,14 +97,14 @@
     "napcat_url": "ws://127.0.0.1:3001/",
     "repeat_possibility": 0.5,
     "at_possibility": 0.01,
-    "ated_reply_possibility": 0.5,
-    "ated_reply_llm_possibility": 0.5,
+    "ated_reply_possibility": 1,
+    "ated_reply_llm_possibility": 1,
     "poke_possibility": 0.01,
-    "llm_possibility": 0.0,
+    "llm_possibility": 0.1,
     "do_report": true,
     "do_follow_emoji": true,
     "follow_emoji_possibility": 0.5,
     "do_emoji_threshold_reply": true,
     "emoji_threshold_reply_possibility": 0.02,
-    "set_reply_possibility": null
+    "set_reply_possibility": 0.1
 }

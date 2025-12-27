@@ -7,6 +7,7 @@ from module import *
 from event import *
 import logger
 from logger import Logger
+from message_image import *
 
 
 
@@ -17,6 +18,7 @@ class MessageComponent:
             data = args[1]
             self.type = type
             self.data = data
+            self.descriptor = None
 
         elif len(args) == 1:
             if isinstance(args[0],tuple):
@@ -30,7 +32,7 @@ class MessageComponent:
                 self.data = args[0].data
 
     
-
+    '''注意:在加载message_formatter模块后，这个功能通过hook被message_formatter.format取代，以提供多模态llm图片摘要、信息id查询、qqid查询等等高级服务'''
     def __str__(self):
         if self.type == 'reply':
             return '[回复信息id' + str(self.data) + ']'   #data->message_id
@@ -40,13 +42,11 @@ class MessageComponent:
             return self.data
         elif self.type == 'at':                   #data->qq_id
             return '[@' + str(self.data) + ']'
-            
-
 
 #定义消息对象
 
 class Message:
-    inner_count = 0
+    inner_count = -1
     def __init__(self, *args):
         if len(args) == 0:
             #消息组件
@@ -64,8 +64,11 @@ class Message:
             #是否具有group_id
             self.has_group_id = False
 
+            #消息修饰器
+            self.decorator = []
+
             #id计数器--
-            Message.inner_count -= 1
+            #Message.inner_count -= 1
         elif len(args) == 1:
             if isinstance(args[0], str):  #传入纯文本初始化
                 self.content = [MessageComponent('text', args[0])]
@@ -168,9 +171,11 @@ class Message:
                 if raw_component['type'] == 'text':
                     self.content.append(MessageComponent('text',raw_component['data']['text']))
                 elif raw_component['type'] == 'at':
-                    self.content.append(MessageComponent('at',raw_component['data']['qq']))
+                    self.content.append(MessageComponent('at',int(raw_component['data']['qq'])))
                 elif raw_component['type'] == 'reply':
-                    self.content.append(MessageComponent('at',raw_component['data']['id']))
+                    self.content.append(MessageComponent('reply',int(raw_component['data']['id'])))
+                elif raw_component['type'] == 'image':
+                    self.content.append(MessageComponent('image',MessageImage(raw_component['data']['url'])))
 
 class SystemModule(Module):
     pass
@@ -191,6 +196,7 @@ class MessageHandler:
         self.logger = Logger()
         self.target_groups = target_groups
         self.message_history = list()
+
 
         #发送信息时，以0优先级调用发送
         self.system_module = SystemModule()

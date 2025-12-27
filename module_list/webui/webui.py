@@ -4,6 +4,8 @@ from module import Module
 from message_utils import *
 from logger import Logger
 
+import threading
+
 import json
 import os
 from typing import Any, Dict
@@ -17,6 +19,7 @@ class webui(Module):
     def __init__(self):
         self.context = None
         self.config_manager = None
+        self.module_manager = None
         self.flask_app = None
         pass
     
@@ -26,13 +29,15 @@ class webui(Module):
         #module_handler.config.register_config('do_report', module=self)
 
 
-    async def run(self, event, context):
+    def run(self, event, context):
         """flask app启动，并申请context，初始化ConfigManager"""
+
         self.context = context.event_handler.apply_for_context(self)
 
         self.config_manager = ConfigManager(self.context.mod.config)
+        self.module_manager = ModuleManager(self.context.mod)
 
-        self.flask_app = flask_app.FlaskApp(self.config_manager)
+        self.flask_app = flask_app.FlaskApp(self.config_manager, self.module_manager)
 
 
 
@@ -80,3 +85,15 @@ class ConfigManager:
     def get_registered_configs(self):
         """获取所有注册的配置项，按模块分组"""
         return self.config.get_registered_configs()
+    
+
+class ModuleManager:
+    def __init__(self, module_handler):
+        #with open('settings.json', "r", encoding='utf-8') as f:
+            #settings = json.load(f)
+
+
+        self.module_handler = module_handler
+
+    def get_all_modules(self):
+        return self.module_handler.loaded_modules

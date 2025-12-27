@@ -1,9 +1,24 @@
 from module import *
 from message_utils import *
-from enum import Enum
 import logger
 
-class EventType(Enum):
+import asyncio
+import math
+
+import threading
+
+class CallableHookEventData:
+    '''注意,ret是一个列表，要访问返回值应该使用ret[0]'''
+    def __init__(self, ret, target, args, kwargs, bypass_calling=False):
+        self.ret = ret
+        self.target = target
+        self.args = args
+        self.kwargs = kwargs
+        self.bypass_calling = bypass_calling
+
+class EventType:
+    event_id_count = 5
+
     EVENT_UNDEFINED = -1       #data : Any
     EVENT_INIT = 0             #data : None
     EVENT_RECV_MSG = 1         #data : Message
@@ -14,7 +29,96 @@ class EventType(Enum):
 
     SPECIAL_APPLY_CONTEXT = 4       #如果module中需要申请一个context来沟通，此context中的操作仍然将被视为一个事件
 
-import asyncio
+    class CustomEventNamespace:
+        def __init__(self, module_name):
+            self.module_name = module_name
+
+    targets_of_callable_hook_events = {}
+
+    def register_event(name, module: str | Module):
+        if isinstance(module, Module):
+            module_name = module.__class__.__name__
+        else:
+            module_name = module
+
+            
+        if not hasattr(EventType, module_name):
+            setattr(EventType, module_name, EventType.CustomEventNamespace(module_name))
+        setattr(getattr(EventType, module_name), name, EventType.event_id_count)
+        EventType.event_id_count += 1
+
+    def register_callable_hook_event(name, module:Module, target:Callable, event_handler):
+        '''只支持Module内注册hook event'''
+        '''**记得使用此函数的返回值*覆盖*你需要hook的Callable对象'''
+        '''原函数在优先级0被调用，此后可以通过event.data[0]来修改返回值'''
+        '''如果要修改返回值，注意不能直接return，而是要通过event.data.ret.append(返回值)
+        （注意，不可以覆盖ret的列表，这会导致返回值无法读取)，也就是只能通过append来添加返回值）来修改被hook函数的返回值'''
+        if isinstance(module, Module):
+            module_name = module.__class__.__name__
+        else:
+            module_name = module
+
+            
+        if not hasattr(EventType, module_name):
+            setattr(EventType, module_name, EventType.CustomEventNamespace(module_name))
+        setattr(getattr(EventType, module_name), name, EventType.event_id_count)
+        EventType.targets_of_callable_hook_events[EventType.event_id_count] = target
+
+        event_type = EventType.event_id_count
+
+
+        def _wrapper_event_sync(*args,**kwargs):
+            ret = list()
+            event = Event(event_type, CallableHookEventData(ret,target,args,kwargs))
+            # 创建一个新的事件循环并在新线程中运行
+            loop = asyncio.new_event_loop()
+            result = None
+            exception = None
+
+            def run():
+                nonlocal result, exception
+                asyncio.set_event_loop(loop)
+                try:
+                    loop.run_until_complete(
+                        event_handler.dispatch_custom_event(event, module)
+                    )
+                except Exception as e:
+                    raise e
+                finally:
+                    loop.close()
+
+            thread = threading.Thread(target=run)
+            thread.daemon = True
+            thread.start()
+            thread.join()
+
+            if exception is not None:
+                raise exception
+            result = ret[0]
+            return result
+        
+        async def _wrapper_event_async(*args,**kwargs):
+            ret = list()
+
+            event = Event(event_type, CallableHookEventData(ret,target,args,kwargs))
+            await event_handler.dispatch_custom_event(event, module)
+
+            result = ret[0]
+            return result
+
+        async def _wrapper_call(event, context):
+            if not event.data.bypass_calling:
+                if asyncio.iscoroutinefunction(event.data.target):
+                    event.data.ret.append(await event.data.target(*event.data.args,**event.data.kwargs))
+                else:
+                    event.data.ret.append(event.data.target(*event.data.args,**event.data.kwargs))
+
+        event_handler._inner_register_listener(module, event_type, _wrapper_call, 0)
+
+        EventType.event_id_count += 1
+
+        return _wrapper_event_async if asyncio.iscoroutinefunction(target) else _wrapper_event_sync
+
 from collections import defaultdict
 from typing import *
 import json
@@ -49,7 +153,6 @@ class Event:
     
     def block_event(self):
         self.blocked = True
-
 
 from history import *
 
@@ -169,9 +272,9 @@ class Listener:
     def add_post_hook(self, source_module_classname: str, hook_callback: Callable, priority):
         self.post_hook.append((priority, source_module_classname, hook_callback))
 
-    async def call(self, event: Event, context: EventContextProxy) -> Any:
+    async def call_async(self, event: Event, context: EventContextProxy) -> Any:
         """
-        将任意参数转发给callback函数，并处理hook和history记录逻辑
+        将任意参数转发给callback函数，并处理hook和history记录逻辑（异步，当callback为coroutinue时调用）
         
         参数:
             *args: 任意位置参数
@@ -186,10 +289,8 @@ class Listener:
                 return False
             
 
-        if asyncio.iscoroutinefunction(self.callback):
-            ret = await self.callback(event, context)
-        else:
-            ret =  self.callback(event, context)
+
+        ret = await self.callback(event, context)
 
         context.update_history(Action(ActionType.ACTION_RETURN, ret, self.module, event))
 
@@ -202,6 +303,35 @@ class Listener:
         context.destroy()
         return ret
 
+    def call_sync(self, event: Event, context: EventContextProxy) -> Any:
+        """
+        将任意参数转发给callback函数，并处理hook和history记录逻辑（同步版，当callback为普通函数时调用）
+        
+        参数:
+            *args: 任意位置参数
+            **kwargs: 任意关键字参数
+            
+        返回:
+            callback函数的返回值
+        """
+        for each in sorted(self.pre_hook, key=lambda x: x[0], reverse=True):
+            #pre_hook返回False将导致消息被拦截，不会发送给listener
+            if not each[2](each[1], event, context):
+                return False
+            
+
+        ret =  self.callback(event, context)
+
+        context.update_history(Action(ActionType.ACTION_RETURN, ret, self.module, event))
+
+        for each in sorted(self.post_hook, key=lambda x: x[0], reverse=True):
+            #post_hook返回False将导致消息被认为失败
+            #post_hook回调格式：callback(被hook的module类名,listener返回值,事件,context,这个listener处理过程中产生了什么action
+            if not each[2](each[1], ret, event, context, context.dump_history()):
+                return False
+            
+        context.destroy()
+        return ret
 
 
 
@@ -285,14 +415,19 @@ class EventHandler:
 
         return proxy
     
-    async def dispatch_event(self, event: Event, real_context: EventContext):
-        event_type = event.event_type
+    async def dispatch_event(self, event: Event, context: EventContext):
+        await self._dispatch_event(event, context)
 
+    async def dispatch_custom_event(self, event: Event, module: Module):
+        await self.dispatch_event(event, self.apply_for_context(module))
+    
+    async def _dispatch_event(self, event: Event, real_context: EventContext):
+        event_type = event.event_type
 
         """分发事件，按照优先级顺序执行"""
         if event_type not in self.listeners:
             return
-        
+
         # 获取该事件类型的所有监听器
         corresponding_listeners = self.listeners[event_type]   #得到Dict[Priority(以int表示), List[Callable]]
         
@@ -304,7 +439,7 @@ class EventHandler:
         for priority in sorted_priorities:
             #获取当前优先级的监听器
             listeners = corresponding_listeners[priority]
-        
+
             #如果当前优先级没有任何监听器
             if not listeners:
                 continue
@@ -315,19 +450,18 @@ class EventHandler:
             for listener in listeners:
                 #一个context代理
                 context = EventContextProxy(listener.module, real_context, event)
-                
+                loop = asyncio.get_running_loop()
                 try:
                     if asyncio.iscoroutinefunction(listener.callback):
                         # 如果是协程函数，直接创建任务
                         tasks.append(asyncio.create_task(
-                            listener.call(event, context)
+                            listener.call_async(event, context)
                         ))
                     else:
                         # 请尽可能使用协程函数
-                        # 同步函数使用 to_thread 在单独线程中运行
-                        tasks.append(asyncio.create_task(
-                            asyncio.to_thread(listener.call, event, context),
-                        ))
+                        tasks.append(
+                            loop.run_in_executor(None, listener.call_sync, event, context)
+                        )
                 except Exception as e:
                     print(f"Error creating task for listener: {e}")
 

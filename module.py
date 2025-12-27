@@ -80,6 +80,12 @@ class ModuleHandler:
         self.loaded_modules = set()  # 当前已加载的模块集合
         self.logger = Logger()
 
+    def has_module(self, name):
+        if self.modules_by_name.get(name, None):
+            return True
+        else:
+            return False
+
     def register_module(self, instance:Module, attribute:ModuleAttribute):
         #用modulehandler.classname访问别的module类
         # 获取实例的类型名
@@ -317,6 +323,17 @@ def scan_module():
     module_instances = {}
     module_classes = {}
     base_module_path = Path(__file__).parent / "module_list"
+    disabled_modules = []
+
+    sys.path.append(str(Path(__file__).parent))
+    sys.path.append(str(base_module_path))
+
+    #已关闭模块的列表
+    try:
+        with open(str(base_module_path / 'DISABLED'), "r", encoding='utf-8') as f:
+            disabled_modules = f.read().split('\n')
+    except FileNotFoundError:
+        open(str(base_module_path / 'DISABLED'), "w", encoding='utf-8').close()
     
     def is_module_subclass(cls):
         """检查类是否是Module的子类且不是Module本身"""
@@ -333,9 +350,10 @@ def scan_module():
         rel_path = file_path.relative_to(base_module_path)
         module_name = str(rel_path).replace(os.path.sep, '.').replace('.py', '')
         
-        # 如果模块已经被导入过，直接返回
+        # 如果模块已经被导入过，则直接返回
         if module_name in sys.modules:
             return sys.modules[module_name]
+        
         
         # 使用importlib导入模块
         spec = importlib.util.spec_from_file_location(module_name, file_path)
@@ -359,11 +377,14 @@ def scan_module():
     for root, dirs, files in os.walk(base_module_path):
         for file in files:
             if file.endswith('.py') and not file.startswith('__'):
+                #sys.path.append(str(Path(root)))
                 py_files.append(Path(root) / file)
     
     # 导入所有模块
     for py_file in py_files:
+        sys.path.append(str(py_file.parent))
         module = import_module_from_file(py_file)
+        sys.path.pop()
         if module is None:
             continue
             
@@ -376,7 +397,7 @@ def scan_module():
                 class_name = attr.__name__
                 
                 # 确保每个类只被导入一次
-                if class_name not in module_classes:
+                if class_name not in module_classes and class_name not in disabled_modules:
                     module_classes[class_name] = attr
                     
                     try:
