@@ -1,13 +1,15 @@
 import random
 from collections import deque
 from typing import *
+from logger import Logger
 
 class Module:
     def __init__(self):
         '''WARNING:__init__会被自动加载器无参数使用，若要重写__init__，务必保证无参数调用'''
     #注意，加载与卸载函数应该是非异步的
     def register(self, message_handler, event_handler, module_handler):
-        '''模块的初始化函数，是必须的，会被系统调用，若要重写，务必保证不要改变参数形式'''
+        '''模块的初始化函数，是必须的，会被系统调用，若要重写，务必保证不要改变参数形式。注意！为了保持listener行为的跟踪，请不要保存register中的handler，
+    此时应该从context中获取message_handler和event_handler'''
     
     def unregister(self):
         '''模块的卸载函数，不是必须的'''
@@ -37,6 +39,33 @@ class ModuleAttribute:
         #版本、作者等
         #TODO:暂未实现
 
+class DisposableEventHandlerWrapper:
+    def __init__(self, event_handler):
+        self.event_handler = event_handler
+        self.valid = True
+
+    def __getattr__(self, name):
+        if not self.valid:
+            raise RuntimeError("此EventHandler引用已结束生命周期，无法访问，请使用context中的event_handler访问event_handler")
+        return getattr(self.event_handler, name)
+    
+    def dispose(self):
+        self.valid = False
+
+class DisposableMessageHandlerWrapper:
+    def __init__(self, message_handler):
+        self.message_handler = message_handler
+        self.valid = True
+
+    def __getattr__(self, name):
+        if not self.valid:
+            raise RuntimeError("此MessageHandler引用已结束生命周期，无法访问，请使用context中的message_handler访问message_handler")
+        return getattr(self.message_handler, name)
+    
+    def dispose(self):
+        self.valid = False
+
+    
     
 class ModuleHandler:
     def __init__(self):
@@ -49,6 +78,13 @@ class ModuleHandler:
         self.in_degree: Dict[str, int] = {}    # 每个模块的入度（前置依赖数量）
         self.modules_by_name: Dict[str, Any] = {}  # 模块名到模块实例的映射
         self.loaded_modules = set()  # 当前已加载的模块集合
+        self.logger = Logger()
+
+    def has_module(self, name):
+        if self.modules_by_name.get(name, None):
+            return True
+        else:
+            return False
 
     def register_module(self, instance:Module, attribute:ModuleAttribute):
         #用modulehandler.classname访问别的module类
@@ -105,17 +141,23 @@ class ModuleHandler:
         if processed_count != len(module_dict):
             # 找出形成循环的模块
             remaining = [class_name for class_name, degree in self.in_degree.items() if degree > 0]
-            raise RuntimeError(f"发现循环依赖，无法确定加载顺序。涉及模块: {remaining}")
+            raise RuntimeError(f"[\033[31mERROR\033[0m]发现循环依赖，无法确定加载顺序。涉及模块: {remaining}")
         
         # 按照正确的顺序初始化模块
         for class_name in load_order:
             module_instance = self.modules_by_name[class_name]
-            print('[DEBUG]:模块' + class_name + '已加载')
+            self.logger.debug('模块' + class_name + '已加载')
             # 模块的初始化
-            module_instance.register(message_handler, message_handler.event_handler, self)
+            message_handler_wrapper = DisposableMessageHandlerWrapper(message_handler)
+            event_handler_wrapper = DisposableEventHandlerWrapper(message_handler.event_handler)
+            module_instance.register(message_handler_wrapper, event_handler_wrapper, self)
+            message_handler_wrapper.dispose()
+            event_handler_wrapper.dispose()
+            del message_handler_wrapper
+            del event_handler_wrapper
             # 将模块加入module管理器
             attribute = ModuleAttribute()
-            attribute.resigter_name = class_name
+            attribute.register_name = class_name
             self.register_module(module_instance, attribute)
             self.loaded_modules.add(class_name)
 
@@ -135,7 +177,7 @@ class ModuleHandler:
     
 
         if register_name not in self.loaded_modules:
-            print(f'[ERROR]:模块 {register_name} 未加载，无法卸载')
+            self.logger.error(f'模块 {register_name} 未加载，无法卸载')
             return []
         
         # 查找所有需要卸载的模块（BFS遍历依赖树）
@@ -154,8 +196,8 @@ class ModuleHandler:
             
             # 如果有其他模块依赖此模块且不是强制卸载，则不能卸载
             if dependents and not force_unload:
-                print(f'[WARN]:模块 {current} 被以下模块依赖，无法卸载: {dependents}')
-                print('[INFO]:使用 force_unload=True 可以强制卸载')
+                self.logger.warning(f'模块 {current} 被以下模块依赖，无法卸载: {dependents}')
+                self.logger.info('使用 force_unload=True 可以强制卸载')
                 return []
             
             # 添加到卸载列表
@@ -218,11 +260,11 @@ class ModuleHandler:
             # 从已加载集合中移除
             self.loaded_modules.remove(module_name)
             
-            print(f'[DEBUG]:模块 {module_name} 已卸载')
+            self.logger.debug(f'模块 {module_name} 已卸载')
             return True
             
         except Exception as e:
-            print(f'[ERROR]:卸载模块 {module_name} 时出错: {e}')
+            self.logger.error(f'卸载模块 {module_name} 时出错: {e}')
             return False
     
     def unload_all(self):
@@ -234,7 +276,7 @@ class ModuleHandler:
             if self._unload_single_module(module_name):
                 unloaded.append(module_name)
         
-        print('[DEBUG]:已卸载所有模块')
+        self.logger.debug('已卸载所有模块')
         return unloaded
     
     def get_module_dependencies(self, module_name: str) -> Dict[str, List[str]]:
@@ -281,6 +323,17 @@ def scan_module():
     module_instances = {}
     module_classes = {}
     base_module_path = Path(__file__).parent / "module_list"
+    disabled_modules = []
+
+    sys.path.append(str(Path(__file__).parent))
+    sys.path.append(str(base_module_path))
+
+    #已关闭模块的列表
+    try:
+        with open(str(base_module_path / 'DISABLED'), "r", encoding='utf-8') as f:
+            disabled_modules = f.read().split('\n')
+    except FileNotFoundError:
+        open(str(base_module_path / 'DISABLED'), "w", encoding='utf-8').close()
     
     def is_module_subclass(cls):
         """检查类是否是Module的子类且不是Module本身"""
@@ -297,9 +350,10 @@ def scan_module():
         rel_path = file_path.relative_to(base_module_path)
         module_name = str(rel_path).replace(os.path.sep, '.').replace('.py', '')
         
-        # 如果模块已经被导入过，直接返回
+        # 如果模块已经被导入过，则直接返回
         if module_name in sys.modules:
             return sys.modules[module_name]
+        
         
         # 使用importlib导入模块
         spec = importlib.util.spec_from_file_location(module_name, file_path)
@@ -312,7 +366,7 @@ def scan_module():
             spec.loader.exec_module(module)
             return module
         except Exception as e:
-            print(f"Error importing module {module_name}: {e}")
+            Logger().error(f"Error importing module {module_name}: {e}")
             # 如果导入失败，从sys.modules中移除
             if module_name in sys.modules:
                 del sys.modules[module_name]
@@ -323,11 +377,14 @@ def scan_module():
     for root, dirs, files in os.walk(base_module_path):
         for file in files:
             if file.endswith('.py') and not file.startswith('__'):
+                #sys.path.append(str(Path(root)))
                 py_files.append(Path(root) / file)
     
     # 导入所有模块
     for py_file in py_files:
+        sys.path.append(str(py_file.parent))
         module = import_module_from_file(py_file)
+        sys.path.pop()
         if module is None:
             continue
             
@@ -340,7 +397,7 @@ def scan_module():
                 class_name = attr.__name__
                 
                 # 确保每个类只被导入一次
-                if class_name not in module_classes:
+                if class_name not in module_classes and class_name not in disabled_modules:
                     module_classes[class_name] = attr
                     
                     try:
@@ -348,6 +405,6 @@ def scan_module():
                         if hasattr(instance, 'register'):
                             module_instances[class_name] = instance
                     except Exception as e:
-                        print(f"Error instantiating {class_name} or calling register(): {e}")
+                        Logger().error(f"Error instantiating {class_name} or calling register(): {e}")
     
     return module_instances

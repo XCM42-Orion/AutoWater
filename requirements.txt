@@ -1,0 +1,6 @@
+aiohttp==3.13.2
+beautifulsoup4==4.14.3
+Flask==3.1.2
+gmssl==3.2.2
+Requests==2.32.5
+websockets==15.0.1
