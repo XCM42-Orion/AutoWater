@@ -268,15 +268,15 @@ class FlaskApp:
 
     def run(self):
         # 从配置中读取主机和端口
-        host = '127.0.0.1'#self.config_manager.get_value('host', '127.0.0.1')
-        port = 5000#self.config_manager.get_value('port', 5000)
+        self.host = '127.0.0.1'#self.config_manager.get_value('host', '127.0.0.1')
+        self.port = 5000#self.config_manager.get_value('port', 5000)
         debug = False#self.config_manager.get_value('debug_mode', False)
         
         #print(f"启动应用: {self.config_manager.get_value('self.app_name')}")
         #print(f"访问地址: http://{host}:{port}")
         #print(f"调试模式: {debug}")
 
-        flask_thread = threading.Thread(target=self.app.run, kwargs={'host':host, 'port':port, 'debug':debug})
+        flask_thread = threading.Thread(target=self.app.run, kwargs={'host':self.host, 'port':self.port, 'debug':debug})
         flask_thread.daemon = True  # 设置为守护线程，这样当主线程退出时，Flask线程也会退出
         flask_thread.start()
         

@@ -114,6 +114,8 @@ heartflow   ↓
 3. 访问 `http://127.0.0.1:5000` 管理配置
 
 ### 开发新模块
+
+详见`usermanual.md`。
 1. 在 `module_list/` 下创建新文件
 2. 继承 `Module` 类，实现 `register` 方法
 3. 通过 `message_handler.register_listener` 注册事件监听

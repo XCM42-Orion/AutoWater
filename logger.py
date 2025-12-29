@@ -1,7 +1,8 @@
 import traceback
 
+
 #DEBUG!!
-debug_flag = True
+debug_flag = False
 
 class Logger:
     def info(self, message):
