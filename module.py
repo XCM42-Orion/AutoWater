@@ -23,27 +23,27 @@ class Module:
 class ModuleAttribute:
 
     #给用户看的名（如Example Module）
-    name : str | None
+    name : str | None = None
 
     #注册名（如example_module）
     #目前暂时为类名
-    register_name : str | None
+    register_name : str | None = None
 
     #是否是内置module
     is_builtin : bool = True
 
     #前置module
     #目前无用
-    prerequisite : list[str]
+    prerequisite : list[str] = []
 
     #版本
-    version : str | None
+    version : str | None = None
 
     #作者
-    author : str| None
+    author : str| None = None
 
     #描述
-    desc : str | None
+    desc : str | None = None
 
     def __str__(self) -> str:
         return f"Module {self.name} ({self.version}) by {self.author}: {self.desc}"

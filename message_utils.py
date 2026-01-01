@@ -5,6 +5,7 @@ from collections.abc import Iterable
 import random
 from module import *
 from event import *
+import logger
 from logger import Logger
 
 
@@ -140,6 +141,9 @@ class Message:
         for component in self.content:   #返回一个迭代器
             yield component
 
+    def __len__(self):
+        return len(str(self))
+
 
     def update_payload(self):
         self.payload = {
@@ -196,38 +200,55 @@ class MessageHandler:
         context = EventContext()
 
         context.message_handler = self
+        context.event_handler = self.event_handler
         context.mod = self.module_handler
 
-        event = Event(event_type, context, data)
+        event = Event(event_type, data)
 
-        await self.listener_system.dispatch_event(event)
+        await self.event_handler.dispatch_event(event, context)
+
+    async def _send_message(self, event, context):
+        if logger.debug_flag:
+            self.logger.debug("发送信息:" + str(event.data[1]))
+            self.logger.warning("注意，现在debug_flag=True，消息发送已被拦截。若要启动消息发送，请在logger.py修改debug_flag为False")
+        else:
+            asyncio.create_task(self.websocket.send(json.dumps(event.data[1].payload)))
     
-    async def send_message_single_group(self, text:str|Message, group_id: str|int):
+    async def _send_message_single_group(self, module: Module, text:str|Message, group_id: str|int,proxy=None):
         """发送消息到WebSocket"""
+        #此处的proxy实际上是发送者的messagehandlerproxy
         if isinstance(text, str):
             message = Message(text)
             message.payload["params"]["group_id"] = group_id
-            await self.websocket.send(json.dumps(message.payload))
+            proxy.feedback(message)
+            await self.dispatch_event(EventType.EVENT_SEND_MSG, (proxy.context_proxy, message))
         elif isinstance(text, Message):
             message = text
             if not message.has_group_id:
                 message.payload["params"]["group_id"] = group_id
-            await self.websocket.send(json.dumps(message.payload))
+            proxy.feedback(message)
+            await self.dispatch_event(EventType.EVENT_SEND_MSG, (proxy.context_proxy, message))
+        return True
     
-    async def send_message_groups(self, text:str|Message, group_ids: Iterable):
-        message_tasks = [asyncio.create_task(self.send_message_single_group(text, group_id)) 
+    async def _send_message_groups(self, module: Module, text:str|Message, group_ids: Iterable, proxy=None):
+        message_tasks = [asyncio.create_task(self._send_message_single_group(module, text, group_id,proxy)) 
                          for group_id in group_ids]
         await asyncio.gather(*message_tasks)
+        return True
     
-    async def send_message(self, text:str|Message, group_id:None|int|str|Iterable=None):
-        if group_id is None:
-            await self.send_message_groups(text, self.group_ids)
-        elif isinstance(group_id, Iterable):
-            await self.send_message_groups(text, group_id)
-        else:
-            await self.send_message_single_group(text, group_id)
+    async def send_message(self, message:str|Message|Iterable, group_id:None|int|str|Iterable=None, proxy=None, module: Module = None):
+        if not isinstance(message, List):
+            message = [message]
+
+        for text in message:
+            if group_id is None:
+                return await self._send_message_groups(module, text, self.group_ids,proxy)
+            elif isinstance(group_id, Iterable):
+                return await self._send_message_groups(module, text, group_id,proxy)
+            else:
+                return await self._send_message_single_group(module, text, group_id,proxy)
     
-    async def send_poke(self, user_id, group_id:None|int|str|Iterable=None):
+    async def send_poke(self, user_id, group_id:None|int|str|Iterable=None, proxy=None, module: Module = None):
         if group_id is None:
             group_id = random.choice(self.group_ids)
         payload = {
@@ -236,10 +257,11 @@ class MessageHandler:
                 "user_id": user_id,
             }
         }
-        await self.send_message(Message(payload), group_id)
+        await self.send_message(module, Message(payload), group_id, proxy)
         self.logger.info(f"已在群 {group_id}戳一戳用户 {user_id}")
+        return True
     
-    async def send_emoji_like(self, message_id, emoji_id):
+    async def send_emoji_like(self, message_id, emoji_id, proxy=None,module: Module = None):
         payload = {
             "action": "set_msg_emoji_like",
             "params": {
@@ -247,20 +269,17 @@ class MessageHandler:
                 "emoji_id": emoji_id
             }
         }
-        await self.send_message(Message(payload))
+        await self.send_message(Message(payload), None, proxy, module)
         self.logger.info(f"已为消息 {message_id} 贴表情 {emoji_id}")
-    
-    async def send_message_list(self, send_list, group_id:None|int|str|Iterable=None):
-        """发送消息列表"""
-        for send_item in send_list:
-            await self.send_message(Message(send_item), group_id)
+        return True
     
     def set_websocket(self, websocket):
         self.websocket = websocket
     
     async def process_message(self, data):
         """处理收到的消息"""
-        if (data.get("post_type") == "message" and data.get("message_type") == "group") or data.get("post_type") == "notice":       
+        accept_message_type = ['message'] if not logger.debug_flag else ['message', 'message_sent']
+        if (data.get("post_type") in accept_message_type and data.get("message_type") == "group") or data.get("post_type") == "notice":       
             group_id = data.get("group_id")
             if group_id not in self.group_ids:
                 return
@@ -276,11 +295,11 @@ class MessageHandler:
 
             message = Message(user_id, message_id, nickname, data)
             self.messages[message_id] = message
-
             # 事件广播
-            if data.get("post_type") == "message":
-                await self.dispatch_event(EventType.EVENT_RECV_MSG, message)
+            if data.get("post_type") in accept_message_type:
+                #先打印日志，后分发事件，以免delay模块造成阻塞，影响用户体验
                 self.logger.info(f"[\033[34m消息\033[0m][\033[34m群聊\033[0m][{data.get('group_name')}({group_id})]{nickname}({user_id})：{message}")
+                await self.dispatch_event(EventType.EVENT_RECV_MSG, message)
             else:
                 await self.dispatch_event(EventType.EVENT_NOTICE_MSG, message)
         else:
