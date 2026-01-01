@@ -1,6 +1,7 @@
 import asyncio
 import json
 from websocket_client import WebSocketClient
+from logger import Logger
 
 
 async def main():
@@ -14,11 +15,11 @@ async def main():
     client = WebSocketClient(napcat_url)
     
     # 连接并运行
-    print("Autowater已启动，正在连接WebSocket...")
+    Logger().debug("Autowater已启动，正在连接WebSocket...")
     try:
         await client.connect()
     except KeyboardInterrupt:
-        print("程序已停止")
+        Logger().error("程序已停止")
 
 if __name__ == "__main__":
     asyncio.run(main())

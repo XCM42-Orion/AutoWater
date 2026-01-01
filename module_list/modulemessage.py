@@ -1,6 +1,7 @@
 from message_utils import *
 import random
 from module import Module
+from logger import Logger
 
 class MessageModule(Module):
     prerequisite = ['config']
@@ -22,6 +23,7 @@ class Repeat(MessageModule):
         if str(message) == self.last_message:
             self.repeat_count += 1
             if random.random() <= config.repeat_possibility and self.repeat_count == 1:
+                Logger.info(f"触发复读：{message}")
                 return await message_handler.send_message(Message(message),message.data.get('group_id'))
         else:
             self.last_message = str(message)
@@ -46,7 +48,7 @@ class RandomReply(MessageModule):
             return False
         
         reply_message = Message(random.choice(config.random_reply))
-        
+        Logger.info(f"触发随机回复：{reply_message}")
         await message_handler.send_message(reply_message,message.data.get('group_id'))
         return True
     
@@ -74,7 +76,9 @@ class AtReply(MessageModule):
                 return False
         
             if random.random() <= config.llm_possibility and config.llm_url:
+                logger = Logger()
                 reply_lines = await context.mod.llm_service.call_llm(str(message), message.user_id, None)
+                logger.info(f"触发被艾特LLM回复：{reply_lines}")
                 if reply_lines:
                     send_list = []
                     for idx, line in enumerate(reply_lines):
@@ -91,6 +95,8 @@ class AtReply(MessageModule):
             
             # 使用预定义的回复
             if config.ated_reply:
+                logger = Logger()
+                logger.info(f"触发被艾特预定义回复：{config.ated_reply}")
                 await message_handler.send_message(Message(random.choice(config.ated_reply)),group_id)
                 return True
             
@@ -108,7 +114,6 @@ class Poke(MessageModule):
 
         if random.random() <= config.poke_possibility:
             await message_handler.send_poke(message.user_id)
-            print("已戳一戳",message.user_id)
             return True
         return False
         
@@ -130,6 +135,7 @@ class KeywordReply(MessageModule):
         for keyword_item in config.keyword_reply:
             if keyword_item['keyword'] in str(message):
                 await message_handler.send_message(Message(random.choice(keyword_item['reply']),message.data.get('group_id')))
+                Logger.info(f"触发关键词回复：{keyword_item['keyword']} -> {keyword_item['reply']}")
                 return True
         return False
     
@@ -151,6 +157,7 @@ class SpecialReply(MessageModule):
             if message.user_id == special_user['id']:
                 reply = [('reply',message.message_id),special_user['reply']]
                 await message_handler.send_message(Message(reply),message.data.get('group_id'))
+                Logger.info(f"触发特殊用户回复：{special_user['id']} -> {special_user['reply']}")
                 return True
         return False
     
@@ -188,12 +195,10 @@ class RandomAt(MessageModule):
         if random.random() <= config.at_possibility:
             reply = [("reply",message.message_id),("at",message.user_id)]
             await message_handler.send_message(Message(reply),message.data.get('group_id'))
+            Logger.info(f"触发随机艾特：@{message.user_id}")
             return True
         return False
     
-
-
-from heartflow import heartflow
 
 class LLMReply(MessageModule):
     async def on_recv_msg(self, event, context):

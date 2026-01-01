@@ -3,6 +3,7 @@ from collections import deque
 from typing import *
 import json
 import os
+from logger import Logger
 
 class Module:
     def __init__(self):
@@ -50,30 +51,7 @@ class ModuleAttribute:
     def __repr__(self) -> str:
         return f"Module {self.name} ({self.version}) by {self.author}: {self.desc}"
 
-# 给定json的目录路径，加载ModuleAttribute类
-def load_attribute(json_path: str) -> ModuleAttribute | None:
-    
-    attribute_data = None
 
-    if os.path.exists(json_path):
-        with open(json_path+'/attribute.json') as f:
-            attribute_data=json.load(f)
-    else:
-        raise Exception('\033[91m[Error]\033[0m路径下不存在attribute.json文件')
-    
-    try:
-        attribute = ModuleAttribute( 
-            name = attribute_data['name'],
-            register_name = attribute_data['register_name'],
-            version = attribute_data['version'],
-            author = attribute_data['author'],
-            desc = attribute_data['desc'])
-    except Exception:
-        raise Exception('\033[91m[Error]\033[0mModuleAttribute信息不完整')
-    
-    attribute.prerequisite = attribute_data['prerequisite'] if 'prerequisite' in attribute_data else []
-    
-    return attribute
     
 
             
@@ -89,6 +67,31 @@ class ModuleHandler:
         self.in_degree: Dict[str, int] = {}    # 每个模块的入度（前置依赖数量）
         self.modules_by_name: Dict[str, Any] = {}  # 模块名到模块实例的映射
         self.loaded_modules = set()  # 当前已加载的模块集合
+        self.logger = Logger()
+
+    # 给定json的目录路径，加载ModuleAttribute类
+    def load_attribute(self, json_path: str) -> ModuleAttribute | None:
+        
+        attribute_data = None
+        if os.path.exists(json_path):
+            with open(json_path+'/attribute.json') as f:
+                attribute_data=json.load(f)
+        else:
+            raise FileNotFoundError('\033[91m[Error]\033[0m路径下不存在attribute.json文件')
+        try:
+            attribute = ModuleAttribute( 
+                name = attribute_data['name'],
+                register_name = attribute_data['register_name'],
+                version = attribute_data['version'],
+                author = attribute_data['author'],
+                desc = attribute_data['desc'])
+        except Exception:
+            self.logger
+            raise Exception('\033[91m[Error]\033[0mModuleAttribute信息不完整')
+        
+        attribute.prerequisite = attribute_data['prerequisite'] if 'prerequisite' in attribute_data else []
+        
+        return attribute
 
     def register_module(self, instance:Module, attribute:ModuleAttribute):
         #用modulehandler.classname访问别的module类
@@ -145,12 +148,12 @@ class ModuleHandler:
         if processed_count != len(module_dict):
             # 找出形成循环的模块
             remaining = [class_name for class_name, degree in self.in_degree.items() if degree > 0]
-            raise RuntimeError(f"发现循环依赖，无法确定加载顺序。涉及模块: {remaining}")
+            raise RuntimeError(f"[\033[31mERROR\033[0m]发现循环依赖，无法确定加载顺序。涉及模块: {remaining}")
         
         # 按照正确的顺序初始化模块
         for class_name in load_order:
             module_instance = self.modules_by_name[class_name]
-            print('[DEBUG]:模块' + class_name + '已加载')
+            self.logger.debug('模块' + class_name + '已加载')
             # 模块的初始化
             module_instance.register(message_handler, message_handler.event_handler, self)
             # 将模块加入module管理器
@@ -175,7 +178,7 @@ class ModuleHandler:
     
 
         if register_name not in self.loaded_modules:
-            print(f'[ERROR]:模块 {register_name} 未加载，无法卸载')
+            self.logger.error(f'模块 {register_name} 未加载，无法卸载')
             return []
         
         # 查找所有需要卸载的模块（BFS遍历依赖树）
@@ -194,8 +197,8 @@ class ModuleHandler:
             
             # 如果有其他模块依赖此模块且不是强制卸载，则不能卸载
             if dependents and not force_unload:
-                print(f'[WARN]:模块 {current} 被以下模块依赖，无法卸载: {dependents}')
-                print('[INFO]:使用 force_unload=True 可以强制卸载')
+                self.logger.warning(f'模块 {current} 被以下模块依赖，无法卸载: {dependents}')
+                self.logger.info('使用 force_unload=True 可以强制卸载')
                 return []
             
             # 添加到卸载列表
@@ -258,11 +261,11 @@ class ModuleHandler:
             # 从已加载集合中移除
             self.loaded_modules.remove(module_name)
             
-            print(f'[DEBUG]:模块 {module_name} 已卸载')
+            self.logger.debug(f'模块 {module_name} 已卸载')
             return True
             
         except Exception as e:
-            print(f'[ERROR]:卸载模块 {module_name} 时出错: {e}')
+            self.logger.error(f'卸载模块 {module_name} 时出错: {e}')
             return False
     
     def unload_all(self):
@@ -274,7 +277,7 @@ class ModuleHandler:
             if self._unload_single_module(module_name):
                 unloaded.append(module_name)
         
-        print('[DEBUG]:已卸载所有模块')
+        self.logger.debug('已卸载所有模块')
         return unloaded
     
     def get_module_dependencies(self, module_name: str) -> Dict[str, List[str]]:
@@ -354,7 +357,7 @@ def scan_module():
             spec.loader.exec_module(module)
             return module
         except Exception as e:
-            print(f"Error importing module {module_name}: {e}")
+            Logger().error(f"Error importing module {module_name}: {e}")
             # 如果导入失败，从sys.modules中移除
             if module_name in sys.modules:
                 del sys.modules[module_name]
@@ -390,7 +393,7 @@ def scan_module():
                         if hasattr(instance, 'register'):
                             module_instances[class_name] = instance
                     except Exception as e:
-                        print(f"Error instantiating {class_name} or calling register(): {e}")
+                        Logger().error(f"Error instantiating {class_name} or calling register(): {e}")
     
     return module_instances
 
