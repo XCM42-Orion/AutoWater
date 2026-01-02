@@ -1,0 +1,5 @@
+data/
+__pycache__/
+config.json
+fingerprint.pickle
+cookies.json
