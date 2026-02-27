@@ -1,11 +1,7 @@
 {
     "target_groups": [
-<<<<<<< HEAD
-        519253540
-=======
         519253540,
         607904537
->>>>>>> refs/remotes/autowater/develop
     ],
     "random_reply": [
         "喵",
@@ -110,9 +106,6 @@
     "follow_emoji_possibility": 0.5,
     "do_emoji_threshold_reply": true,
     "emoji_threshold_reply_possibility": 0.02,
-<<<<<<< HEAD
-    "set_reply_possibility": 0.1
-=======
     "set_reply_possibility": 0,
     "palindrome_reply_possibility": 1,
     "palindrome_left_possibility": 0.5,
@@ -121,5 +114,4 @@
         "？！",
         "，，"
     ]
->>>>>>> refs/remotes/autowater/develop
 }

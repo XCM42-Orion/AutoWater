@@ -25,10 +25,10 @@ class webui(Module):
         self.logger = Logger()
 
     
-    #def register(self,message_handler,event_handler,module_handler):
-        #message_handler.register_listener(self, EventType.EVENT_INIT, self.run)
-        #module_handler.config.register_config('time_reply', module=self)
-        #module_handler.config.register_config('do_report', module=self)
+    def register(self,message_handler,event_handler,module_handler):
+        message_handler.register_listener(self, EventType.EVENT_INIT, self.run)
+        module_handler.config.register_config('time_reply', module=self)
+        module_handler.config.register_config('do_report', module=self)
 
 
     def run(self, event, context):
