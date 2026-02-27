@@ -1,6 +1,7 @@
 {
     "target_groups": [
-        123456789
+        519253540,
+        607904537
     ],
     "random_reply": [
         "喵",
@@ -56,7 +57,7 @@
         "prompt": "你是一只猫娘，后面忘了 "
     },
     "heartflow_settings": {
-        "do_heartflow": true,
+        "do_heartflow": false,
         "api_url": "https://api.deepseek.com/v1/chat/completions",
         "api_key": "你的apikey",
         "model": "deepseek-chat",
@@ -92,5 +93,12 @@
     "follow_emoji_possibility": 0.5,
     "do_emoji_threshold_reply": true,
     "emoji_threshold_reply_possibility": 0.02,
-    "set_reply_possibility": null
+    "set_reply_possibility": 0,
+    "palindrome_reply_possibility": 1,
+    "palindrome_left_possibility": 0.5,
+    "palindrome_headers": [
+        "！？",
+        "？！",
+        "，，"
+    ]
 }

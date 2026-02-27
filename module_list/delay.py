@@ -24,7 +24,7 @@ class delay(Module):
         classname = type(target_context.module).__name__
         if classname == 'Repeat' or classname == 'Poke' or classname == 'Emoji' or classname == 'RandomAt' or classname == 'FollowEmoji':
             await asyncio.sleep(self.constant_delay(3))
-        elif classname == 'RandomReply' or classname == 'RandomAt' or classname == 'KeywordReply' or classname == 'LLMReply':
+        elif classname == 'RandomReply' or classname == 'RandomAt' or classname == 'KeywordReply' or classname == 'LLMReply' or classname == "PalindromeReply":
             await asyncio.sleep(self.standard_delay(message, reply))
         elif classname == 'SpecialReply' or classname == 'EmojiThreshold':
             await asyncio.sleep(self.only_output_delay(reply))

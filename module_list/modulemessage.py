@@ -61,6 +61,47 @@ class RandomReply(MessageModule):
         module_handler.config.register_config('random_reply_possibility', module=self)
 
         super().register(message_handler, event_handler, module_handler)
+
+class PalindromeReply(MessageModule):
+    async def on_recv_msg(self, event, context):
+        """处理回文回复"""
+        message = event.data
+        config = context.mod.config
+
+        if random.random() > config.palindrome_reply_possibility:
+            return False
+        text = ''.join([comp.data for comp in message.content if comp.type == 'text'])
+        delete_chars = ' ,.!?@#$%^&*()_+-=~`|\\/:;"\'<>\n？！，。；：‘’“”【】（）—…'
+        for char in delete_chars:
+            text = text.replace(char, '')
+        if text == '':
+            return False
+        if len(text) % 2 == 0:
+            left = text[:len(text) // 2]
+            right = text[len(text) // 2:]
+        elif len(text) != 1:
+            left = text[:len(text) // 2]
+            right = text[len(text) // 2 + 1:]
+        else:
+            left = text
+            right = text
+        randomheader = random.choice(config.palindrome_headers)
+        
+        randomnum = random.random()
+        if randomnum <= config.palindrome_left_possibility:
+            text = randomheader + left + left[::-1] + randomheader[::-1]
+        else:
+            text = randomheader + right[::-1] + right + randomheader[::-1]
+        logger = Logger()
+        logger.info(f"触发回文回复：{text}")
+        return await context.message_handler.send_message(Message(text),message.data.get('group_id'))
+
+    def register(self, message_handler, event_handler, module_handler):
+        module_handler.config.register_config('palindrome_headers', module=self)
+        module_handler.config.register_config('palindrome_reply_possibility', module=self)
+        module_handler.config.register_config('palindrome_left_possibility', module=self)
+
+        super().register(message_handler, event_handler, module_handler)
     
 
 
