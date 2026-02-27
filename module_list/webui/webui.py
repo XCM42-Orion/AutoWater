@@ -21,11 +21,9 @@ class webui(Module):
         self.config_manager = None
         self.module_manager = None
         self.flask_app = None
-<<<<<<< HEAD
-=======
+
         self.logger = Logger()
->>>>>>> main
-        pass
+
     
     #def register(self,message_handler,event_handler,module_handler):
         #message_handler.register_listener(self, EventType.EVENT_INIT, self.run)
@@ -40,14 +38,9 @@ class webui(Module):
 
         self.config_manager = ConfigManager(self.context.mod.config)
         self.module_manager = ModuleManager(self.context.mod)
-<<<<<<< HEAD
 
-        self.flask_app = flask_app.FlaskApp(self.config_manager, self.module_manager)
-=======
         self.flask_app = flask_app.FlaskApp(self.config_manager, self.module_manager)
         self.logger.debug(f"Autowater Webui 已启动。url: http://{self.flask_app.host}:{self.flask_app.port}/")
->>>>>>> main
-
 
 
 """
