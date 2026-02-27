@@ -100,6 +100,8 @@ Autowater 提供了丰富的配置项。你可以使用 Web UI 配置 Autowater 
 | `background_message_number` | `int` | 用于构建模型上下文的消息数。|
 | `apikey` | `string` | 调用模型所使用的 API Key。|
 | `prompt` | `string` | 模型提示词。 |
+| `multimodel` | `bool` | 模型是否支持图像模态。 |
+| `thinking` | `bool` | 是否开启思考。|
 
 ### Heartflow 心流回复配置
 
@@ -119,6 +121,23 @@ Autowater 提供了丰富的配置项。你可以使用 Web UI 配置 Autowater 
 | `random_weight` | `float` | 随机权重。用于判断随机数在总参考当中的占比。|
 | `energy_recover_rate` | `float` | 精力回复速度（暂未启用）。|
 | `reply_threshold`| `float` | 回复阈值。将回复意愿、上下文参考、随机数各乘以各自的权重得到的值若大于回复阈值则触发心流回复。|
+
+### 图像转述模型配置
+
+本部分配置位于 `vllm_settings` 字段下。Autowater 采用 OpenAI 兼容的 API 格式，因此请确保使用的是 OpenAI 兼容的 API。
+
+| 字段名 | 类型 | 描述 | 
+|-|-|-|
+| `enable` | `bool` | 是否启用图像转述，|
+| `url` | `string` | 调用LLM的 API 接口。请直接配置到 API 的 `/chat/completions ` 接口，例如 `"https://api.deepseek.com/v1/chat/completions"`。|
+| `model` | `string` | 用于图像转述的视觉模型 id 。|
+| `temperature` | `float` | 模型温度。|
+| `max_tokens` | `int` | 模型可使用的最大 token 数。|
+| `background_message_number` | `int` | 用于构建模型上下文的消息数。|
+| `apikey` | `string` | 调用模型所使用的 API Key。|
+| `prompt` | `string` | 图像转述模型提示词。 |
+| `multimodel` | `bool` | 模型是否支持图像模态。 |
+| `thinking` | `bool` | 是否开启思考。|
 
 ## 启动 Autowater
 

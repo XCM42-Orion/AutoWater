@@ -266,6 +266,21 @@
 
     回文回复的等待时间采用 `standard_delay` 。
 
+- 增加了图像转述功能。可以在 `config.json` 中配置图像转述的相关参数：
+
+    | 字段名 | 类型 | 描述 | 
+    |-|-|-|
+    | `enable` | `bool` | 是否启用图像转述，|
+    | `url` | `string` | 调用LLM的 API 接口。请直接配置到 API 的 `/chat/completions ` 接口，例如 `"https://api.deepseek.com/v1/chat/completions"`。|
+    | `model` | `string` | 用于图像转述的视觉模型 id 。|
+    | `temperature` | `float` | 模型温度。|
+    | `max_tokens` | `int` | 模型可使用的最大 token 数。|
+    | `background_message_number` | `int` | 用于构建模型上下文的消息数。|
+    | `apikey` | `string` | 调用模型所使用的 API Key。|
+    | `prompt` | `string` | 图像转述模型提示词。 |
+    | `multimodel` | `bool` | 模型是否支持图像模态。 |
+    | `thinking` | `bool` | 是否开启思考。|
+
 ### Changed
 
 - 更新了 `Readme.md` 。
