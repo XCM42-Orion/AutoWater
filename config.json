@@ -1,11 +1,6 @@
 {
     "target_groups": [
-<<<<<<< HEAD
-        519253540
-=======
-        519253540,
-        607904537
->>>>>>> refs/remotes/autowater/develop
+        1234567890
     ],
     "random_reply": [
         "喵",
@@ -49,7 +44,7 @@
             "reply": "📢🎶🎶🎶\n📢同学们❗❗\n📢体育锻炼时间到了🏃🏻‍♀️🏃🏻‍♂️\n📢无体育❌不清华🌸\n📢让我们走出教室🏠走出宿舍🏠\n📢在体育锻炼中👊🏻保持强健🔥体魄💪🏻\n📢争取至少为祖国健康工作5⃣️0⃣️年❗\n📢🎶🎶🎶"
         }
     ],
-    "ated_reply": "？, 何意味, 何, 被男娘艾特了",
+    "ated_reply": ["？", "何意味", "何", "被男娘艾特了"],
     "llm_settings": {
         "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
         "model": "glm-4.6v",
@@ -110,16 +105,12 @@
     "follow_emoji_possibility": 0.5,
     "do_emoji_threshold_reply": true,
     "emoji_threshold_reply_possibility": 0.02,
-<<<<<<< HEAD
-    "set_reply_possibility": 0.1
-=======
     "set_reply_possibility": 0,
-    "palindrome_reply_possibility": 1,
+    "palindrome_reply_possibility": 0.1,
     "palindrome_left_possibility": 0.5,
     "palindrome_headers": [
         "！？",
         "？！",
         "，，"
     ]
->>>>>>> refs/remotes/autowater/develop
 }
