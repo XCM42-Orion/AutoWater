@@ -1,6 +1,11 @@
 {
     "target_groups": [
+<<<<<<< HEAD
         519253540
+=======
+        519253540,
+        607904537
+>>>>>>> refs/remotes/autowater/develop
     ],
     "random_reply": [
         "喵",
@@ -34,8 +39,7 @@
             "reply": [
                 "这是一个检测到关键字之后的回复",
                 "可以输出这个",
-                "也可以输出这个",
-                "还可以输出这个"
+                "也可以输出这个"
             ]
         }
     ],
@@ -106,5 +110,16 @@
     "follow_emoji_possibility": 0.5,
     "do_emoji_threshold_reply": true,
     "emoji_threshold_reply_possibility": 0.02,
+<<<<<<< HEAD
     "set_reply_possibility": 0.1
+=======
+    "set_reply_possibility": 0,
+    "palindrome_reply_possibility": 1,
+    "palindrome_left_possibility": 0.5,
+    "palindrome_headers": [
+        "！？",
+        "？！",
+        "，，"
+    ]
+>>>>>>> refs/remotes/autowater/develop
 }

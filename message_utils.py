@@ -295,7 +295,8 @@ class MessageHandler:
     
     async def process_message(self, data):
         """处理收到的消息"""
-        accept_message_type = ['message'] if not logger.debug_flag else ['message', 'message_sent']
+        # Napcat 近期可能发送 message_sent，需要一并接受
+        accept_message_type = ['message', 'message_sent']
         if (data.get("post_type") in accept_message_type and data.get("message_type") == "group") or data.get("post_type") == "notice":       
             group_id = data.get("group_id")
             if group_id not in self.group_ids:

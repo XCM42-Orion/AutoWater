@@ -377,7 +377,7 @@ class InfoSession:
 
 
 
-class InfoBotCore(Module):
+"""class InfoBotCore(Module):
     prerequisite = ['config', 'llm']
 
 
@@ -400,8 +400,8 @@ class InfoBotCore(Module):
 
         self.bot_news = InfoBotNewsWrapper(self.infosession)
 
-        mod.llm.register_tool(LLMTool('get_news_list','获取清华官方网站新闻列表',[LLMToolArgument("integer","page","新闻列表页码，一页20条")],self.bot_news.on_get_news_list))
-        mod.llm.register_tool(LLMTool('get_news_details','获取清华官方网站新闻详细信息',[LLMToolArgument("integer","index","新闻序号，范围0-19，不要每次都选一样的")],self.bot_news.on_get_news_details))
+        mod.llm.register_tool('get_news_list','获取清华官方网站新闻列表',[LLMToolArgument("integer","page","新闻列表页码，一页20条")],self.bot_news.on_get_news_list)
+        mod.llm.register_tool('get_news_details','获取清华官方网站新闻详细信息',[LLMToolArgument("integer","index","新闻序号，范围0-19，不要每次都选一样的")],self.bot_news.on_get_news_details)"""
     
 
 
