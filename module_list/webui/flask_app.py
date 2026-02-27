@@ -280,4 +280,4 @@ class FlaskApp:
         flask_thread.daemon = True  # 设置为守护线程，这样当主线程退出时，Flask线程也会退出
         flask_thread.start()
         
-        #self.app.run(host=host, port=port, debug=debug)
+        self.app.run(host=host, port=port, debug=debug)
