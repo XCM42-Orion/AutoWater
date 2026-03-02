@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoWater 配置管理</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- 顶部菜单栏 -->
+    <nav class="top-menu">
+        <div class="menu-container">
+            <button class="menu-toggle" id="menu-toggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            
+            <div class="menu-brand">
+                <i class="fas fa-tint"></i>
+                <span>AutoWater</span>
+            </div>
+            
+            <nav class="menu-nav" id="main-nav">
+                <ul>
+                    <li><a href="#" class="active"><i class="fas fa-sliders-h"></i>配置</a></li>
+                    <li><a href="#"><i class="fas fa-cube"></i>模块</a></li>
+                    <li><a href="#"><i class="fas fa-tasks"></i>任务</a></li>
+                    <li><a href="#"><i class="fas fa-history"></i>日志</a></li>
+                    <li><a href="#"><i class="fas fa-chart-line"></i>监控</a></li>
+                    <li><a href="#"><i class="fas fa-cog"></i>系统设置</a></li>
+                    <li><a href="#"><i class="fas fa-question-circle"></i>帮助</a></li>
+                </ul>
+            </nav>
+            
+            <div class="menu-user">
+                <div class="user-info">
+                    <div class="user-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <span>管理员</span>
+                </div>
+                <button class="btn" style="background: rgba(255,255,255,0.1); color: white; border: none;">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- 原来的应用容器 -->
+    <div class="app-container">
+        <!-- 侧边栏 -->
+        <aside class="sidebar">
+            <!-- 侧边栏内容保持不变 -->
+            <div class="sidebar-header">
+                <h2><i class="fas fa-cogs"></i> AutoWater</h2>
+                <p class="app-version">配置管理面板</p>
+            </div>
+            
+            <div class="sidebar-content">
+                <div class="modules-section">
+                    <h3><i class="fas fa-cube"></i> 模块列表</h3>
+                    <div class="module-list" id="module-list">
+                        <div class="loading-modules">
+                            <i class="fas fa-spinner fa-spin"></i> 加载模块中...
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="quick-actions">
+                    <h3><i class="fas fa-bolt"></i> 快捷操作</h3>
+                    <button class="btn btn-block" id="refresh-all-btn">
+                        <i class="fas fa-sync-alt"></i> 刷新所有
+                    </button>
+                    <button class="btn btn-block btn-primary" id="save-all-btn">
+                        <i class="fas fa-save"></i> 保存全部
+                    </button>
+                </div>
+                
+                <div class="system-info">
+                    <h3><i class="fas fa-info-circle"></i> 系统信息</h3>
+                    <div class="info-item">
+                        <span>配置项总数:</span>
+                        <strong id="total-config-count">0</strong>
+                    </div>
+                    <div class="info-item">
+                        <span>模块数量:</span>
+                        <strong id="module-count">0</strong>
+                    </div>
+                    <div class="info-item">
+                        <span>状态:</span>
+                        <span class="status-indicator healthy" id="system-status">运行中</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar-footer">
+                <p>AutoWater &copy; 2023</p>
+            </div>
+        </aside>
+        
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 主内容区保持不变 -->
+            <header class="main-header">
+                <div class="header-left">
+                    <h1 id="current-module-title">请选择模块</h1>
+                    <p class="module-description" id="current-module-description">从左侧选择模块以查看和编辑配置</p>
+                </div>
+                <div class="header-actions">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="config-search" placeholder="搜索配置项...">
+                    </div>
+                    <button class="btn" id="export-json-btn">
+                        <i class="fas fa-download"></i> 导出JSON
+                    </button>
+                </div>
+            </header>
+            
+            <div class="content-wrapper">
+                <!-- 配置项列表 -->
+                <div class="config-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-sliders-h"></i> 配置项</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-secondary" id="reset-module-btn">
+                                <i class="fas fa-undo"></i> 重置模块
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="config-container" id="config-container">
+                        <div class="empty-state">
+                            <i class="fas fa-cogs fa-3x"></i>
+                            <h3>未选择模块</h3>
+                            <p>请从左侧模块列表中选择一个模块来查看和编辑配置</p>
+                        </div>
+                    </div>
+                    
+                    <div class="config-actions" id="config-actions" style="display: none;">
+                        <button class="btn btn-primary" id="apply-changes-btn">
+                            <i class="fas fa-check"></i> 应用更改
+                        </button>
+                        <button class="btn" id="cancel-changes-btn">
+                            取消
+                        </button>
+                        <span class="unsaved-changes" id="unsaved-count">0 项未保存</span>
+                    </div>
+                </div>
+                
+                <!-- JSON编辑器 -->
+                <div class="json-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-code"></i> JSON 编辑器</h2>
+                        <div class="section-actions">
+                            <button class="btn" id="validate-json-btn">
+                                <i class="fas fa-check"></i> 验证
+                            </button>
+                            <button class="btn btn-primary" id="apply-json-btn">
+                                <i class="fas fa-play"></i> 应用
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="json-editor-container">
+                        <textarea id="json-editor" class="json-editor" placeholder="{}"></textarea>
+                        <div class="json-info">
+                            <i class="fas fa-info-circle"></i>
+                            <span>编辑完整的JSON配置，点击"应用"按钮生效</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 操作日志 -->
+                <div class="log-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-history"></i> 操作日志</h2>
+                        <div class="section-actions">
+                            <button class="btn" id="clear-log-btn">
+                                <i class="fas fa-trash"></i> 清空
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="log-container" id="log-container">
+                        <div class="log-entry info">
+                            <div class="log-time">[系统启动]</div>
+                            <div class="log-message">配置管理面板已就绪</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- 消息提示框 -->
+    <div id="toast" class="toast"></div>
+    
+    <!-- JSON预览模态框 -->
+    <div id="json-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>JSON 配置预览</h3>
+                <button class="modal-close" id="close-json-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <pre id="json-preview"></pre>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" id="copy-json-btn">
+                    <i class="fas fa-copy"></i> 复制到剪贴板
+                </button>
+                <button class="btn btn-primary" id="download-json-btn">
+                    <i class="fas fa-download"></i> 下载文件
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/config.js') }}"></script>
+    <script>
+        // 顶部菜单交互
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuToggle = document.getElementById('menu-toggle');
+            const mainNav = document.getElementById('main-nav');
+            
+            if (menuToggle) {
+                menuToggle.addEventListener('click', function() {
+                    mainNav.classList.toggle('active');
+                });
+            }
+            
+            // 为菜单项添加点击事件
+            const menuItems = document.querySelectorAll('.menu-nav a');
+            menuItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    // 移除所有active类
+                    menuItems.forEach(i => i.classList.remove('active'));
+                    // 为当前点击项添加active类
+                    this.classList.add('active');
+                    
+                    // 在移动端点击后关闭菜单
+                    if (window.innerWidth <= 1024) {
+                        mainNav.classList.remove('active');
+                    }
+                    
+                    // 这里可以添加页面切换逻辑
+                    console.log('切换到: ' + this.textContent.trim());
+                });
+            });
+            
+            // 点击页面其他地方关闭移动端菜单
+            document.addEventListener('click', function(e) {
+                if (window.innerWidth <= 1024 && 
+                    !e.target.closest('.menu-nav') && 
+                    !e.target.closest('.menu-toggle')) {
+                    mainNav.classList.remove('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
