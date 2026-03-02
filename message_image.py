@@ -18,7 +18,7 @@ def get_image_from_url(url: str, format: str = 'JPEG'):
     
     return output_buffer.getvalue()
 
-def get_base64(image):
+def get_base64(image: bytes):
     """获取base64编码"""
     # 如果缓存中没有，则计算并缓存
     return base64.b64encode(image).decode('utf-8')

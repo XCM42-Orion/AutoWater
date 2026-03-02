@@ -1,26 +1,3 @@
-<<<<<<< HEAD
-from message_utils import *
-import random
-from llm_service import *
-
-class Module:
-    def __init__(self):
-        pass
-
-
-    
-    
-class ModuleManager:
-    def __init__(self):
-        self.module_list = list()
-        self.id_counter = 0
-
-    def register_module(self, instance:Module):
-        self.id_counter += 1
-        self.module_list.append(instance)
-        return self.id_counter
-    
-=======
 import random
 from collections import deque
 from typing import *
@@ -431,4 +408,3 @@ def scan_module():
                         Logger().error(f"Error instantiating {class_name} or calling register(): {e}")
     
     return module_instances
->>>>>>> 632916283eceabc4a0514ba114aaf9a79a531762
