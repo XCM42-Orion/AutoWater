@@ -1,6 +1,6 @@
 {
     "target_groups": [
-        1090592070
+        1234567890
     ],
     "random_reply": [
         "喵",
@@ -95,9 +95,9 @@
             ]
         }
     ],
-    "keyword_possibility": 0.1,
+    "keyword_possibility": 0.01,
     "emoji_possibility": 0.5,
-    "random_reply_possibility": 0.05,
+    "random_reply_possibility": 0.015,
     "napcat_url": "ws://127.0.0.1:3001/",
     "repeat_possibility": 0.0,
     "at_possibility": 0.01,
@@ -112,7 +112,7 @@
     "emoji_threshold_reply_possibility": 0.02,
     "set_reply_possibility": 0,
     "palindrome_reply_possibility": 0.01,
-    "palindrome_left_possibility": 0.05,
+    "palindrome_left_possibility": 0.015,
     "palindrome_headers": [
         "！？",
         "？！",

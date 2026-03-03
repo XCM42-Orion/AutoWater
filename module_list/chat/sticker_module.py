@@ -1,4 +1,5 @@
 import json
+import time
 from PIL import Image,ImageFile
 import websockets
 from event import Event, EventContext, EventType
@@ -21,10 +22,10 @@ class SymDir(Enum):
 
 logg = logger.Logger()
 
-def dl_image(url:str, filename:str):
+def dl_image(url:str):
 
-    urlretrieve(url,filename)
-    return Image.open(filename)
+    dl_path = urlretrieve(url)[0]
+    return Image.open(dl_path)
     '''
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
@@ -99,7 +100,7 @@ def sticker_filter(message:Message):
     for item in message.content:
         if item.type == 'image':
             print(message)
-            image = dl_image(item.data.url,'data/tmp.jpg')
+            image = dl_image(item.data.url)
             return image
     return None
 
@@ -117,6 +118,21 @@ class SymModule(Module):
         self.config = mod.config
         self.archive = mod.archive
         self.config.register_config('sym_image', module=self)
+        #should be dealt with in on_register
+        #create necessary folders
+        if not os.path.exists('data'):
+            os.mkdir('data')
+        if not os.path.exists('data/temp'):
+            os.mkdir('data/temp')
+        #clear cache(<1month)
+        tmp_path = 'data/temp'
+        file_list = os.listdir(tmp_path)
+        for file in file_list:
+            cur_path = os.path.join(tmp_path,file)
+            if os.path.isfile(cur_path) and cur_path[-3:] == 'png':
+                time_difference = (time.time()-int(file[:-4]))/1000
+                if time_difference > 30*86400:
+                    os.remove(cur_path)
         
 
     async def on_recv_msg(self, event : Event, context : EventContext):
@@ -127,11 +143,25 @@ class SymModule(Module):
             return False
         
         is_sym = 0
+        sym_dir = SymDir.LEFT_TO_RIGHT
         reply_id = 0
         self.logger.debug(message.content)
         for piece in message.content:
-            if piece.type == 'text' and '对称' in str(piece):
+            piece_params = str(piece).split()
+            if piece.type == 'text' and piece_params[0]=='对称':
                 is_sym+=1
+                print(piece_params)
+                if len(piece_params)==1:
+                    continue
+                match piece_params[1]:
+                    case '左':
+                        sym_dir = SymDir.LEFT_TO_RIGHT
+                    case '右':
+                        sym_dir = SymDir.RIGHT_TO_LEFT
+                    case '上':
+                        sym_dir = SymDir.UP_TO_DOWN
+                    case '下':
+                        sym_dir = SymDir.DOWN_TO_UP
             if piece.type == 'reply':
                 reply_id = int(piece.data)
         if is_sym and reply_id:
@@ -139,52 +169,10 @@ class SymModule(Module):
             self.logger.debug(target_message.message)
             image = sticker_filter(target_message.message)
             if image is not None:
-                im = sym_image(image)
+                im = sym_image(image,sym_dir)
+                tmp_time = int(time.time() * 1000)
                 
-                im.save('test.png')
-                im_base64 = get_base64(im.tobytes())
-                await message_handler.send_message(Message([MessageComponent('image', im_base64)]))
+                im.save(f'data/temp/{tmp_time}.png')
                 
-
-
-            
-
-
-
-
-
-async def connect():
-        """连接WebSocket并处理消息"""
-        while True:
-            try:
-                async with websockets.connect(
-                    "ws://127.0.0.1:3001/",
-                    ping_interval=60,
-                    ping_timeout=30,
-                    close_timeout=10
-                ) as ws:
-                    logg.debug("Napcat WebSocket 已连接")
-
-
-                    logg.debug("模块初始化完成")
-                    
-                    logg.debug("消息处理器已启动")
-                    
-                    logg.debug("Autowater 启动完成。")
-                    # 运行消息处理
-                    async for message in ws:
-                        message = json.loads(message)
-                        #print(message)
-                        sticker_filter(message)
-                    break
-            except Exception as e:
-                if logger.debug_flag:
-                    raise e
-
-                logg.error(f"WebSocket连接错误: {e}，正在尝试重新连接...")
-                await asyncio.sleep(5)
-                continue
-
-if __name__ == '__main__':
-    #asyncio.run(connect())
-    sym_image(Image.open('data/951275C6838D8A0E4B36496F978F46DF.png'),'data/test.png',dir=SymDir.DOWN_TO_UP)
+                await message_handler.send_message(Message([MessageComponent('image', f'{os.getcwd()}/data/temp/{tmp_time}.png')]))
+     
