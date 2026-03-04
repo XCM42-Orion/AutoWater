@@ -1,6 +1,6 @@
 import json
 import time
-from PIL import Image,ImageFile
+from PIL import Image,ImageFile, ImageSequence
 import websockets
 from event import Event, EventContext, EventType
 import logger
@@ -22,9 +22,11 @@ class SymDir(Enum):
 
 logg = logger.Logger()
 
-def dl_image(url:str):
 
+def dl_image(url:str):
+    '''give an url, return downloaded image'''
     dl_path = urlretrieve(url)[0]
+
     return Image.open(dl_path)
     '''
     async with aiohttp.ClientSession() as session:
@@ -99,7 +101,6 @@ def sticker_filter(message:Message):
    
     for item in message.content:
         if item.type == 'image':
-            print(message)
             image = dl_image(item.data.url)
             return image
     return None
@@ -129,8 +130,8 @@ class SymModule(Module):
         file_list = os.listdir(tmp_path)
         for file in file_list:
             cur_path = os.path.join(tmp_path,file)
-            if os.path.isfile(cur_path) and cur_path[-3:] == 'png':
-                time_difference = (time.time()-int(file[:-4]))/1000
+            if os.path.isfile(cur_path) and cur_path[-3:] in ['png','jpg','gif']: #TODO
+                time_difference = (time.time()*1000-int(file[:-4]))/1000
                 if time_difference > 30*86400:
                     os.remove(cur_path)
         
@@ -169,10 +170,16 @@ class SymModule(Module):
             self.logger.debug(target_message.message)
             image = sticker_filter(target_message.message)
             if image is not None:
-                im = sym_image(image,sym_dir)
+                frames = []
+                for frame in ImageSequence.Iterator(image):
+
+                    frames.append(sym_image(frame,sym_dir))
                 tmp_time = int(time.time() * 1000)
+                if 'duration' in image.info:
+                    frames[0].save(f'data/temp/{tmp_time}.gif',format='GIF',save_all=True,append_images = frames[1:],duration=image.info['duration'], disposal=2)
+                else:
+                    frames[0].save(f'data/temp/{tmp_time}.gif',save_all=True,append_images = frames[1:])
                 
-                im.save(f'data/temp/{tmp_time}.png')
-                
-                await message_handler.send_message(Message([MessageComponent('image', f'{os.getcwd()}/data/temp/{tmp_time}.png')]))
+
+                await message_handler.send_message(Message([MessageComponent('image', f'{os.getcwd()}/data/temp/{tmp_time}.gif')]))
      
