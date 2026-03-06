@@ -163,7 +163,9 @@ class Message:
                 self.payload["params"]["message"].append({"type":"at","data":{"qq":str(msg_component.data)}})
             elif msg_component.type == 'reply':
                 self.payload["params"]["message"].append({"type":"reply","data":{"id":str(msg_component.data)}})
-
+            elif msg_component.type == 'image':
+                self.payload["params"]["message"].append({"type":"image","data":{"file":str(msg_component.data)}})
+            
 
     def parse_message(self):
         if self.data.get("message"):
@@ -176,6 +178,7 @@ class Message:
                     self.content.append(MessageComponent('reply',int(raw_component['data']['id'])))
                 elif raw_component['type'] == 'image':
                     self.content.append(MessageComponent('image',MessageImage(raw_component['data']['url'])))
+
 
 class SystemModule(Module):
     pass

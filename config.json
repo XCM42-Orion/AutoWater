@@ -1,6 +1,6 @@
 {
     "target_groups": [
-        1234567890
+        1090592070
     ],
     "random_reply": [
         "喵",
@@ -44,7 +44,12 @@
             "reply": "📢🎶🎶🎶\n📢同学们❗❗\n📢体育锻炼时间到了🏃🏻‍♀️🏃🏻‍♂️\n📢无体育❌不清华🌸\n📢让我们走出教室🏠走出宿舍🏠\n📢在体育锻炼中👊🏻保持强健🔥体魄💪🏻\n📢争取至少为祖国健康工作5⃣️0⃣️年❗\n📢🎶🎶🎶"
         }
     ],
-    "ated_reply": ["？", "何意味", "何", "被男娘艾特了"],
+    "ated_reply": [
+        "？",
+        "何意味",
+        "何",
+        "被男娘艾特了"
+    ],
     "llm_settings": {
         "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
         "model": "glm-4.6v",
@@ -90,27 +95,28 @@
             ]
         }
     ],
-    "keyword_possibility": 0.1,
+    "keyword_possibility": 0.01,
     "emoji_possibility": 0.5,
-    "random_reply_possibility": 0.05,
+    "random_reply_possibility": 0.015,
     "napcat_url": "ws://127.0.0.1:3001/",
-    "repeat_possibility": 0.5,
+    "repeat_possibility": 0.0,
     "at_possibility": 0.01,
-    "ated_reply_possibility": 1,
+    "ated_reply_possibility": 0,
     "ated_reply_llm_possibility": 1,
     "poke_possibility": 0.01,
     "llm_possibility": 0.1,
     "do_report": true,
     "do_follow_emoji": true,
-    "follow_emoji_possibility": 0.5,
+    "follow_emoji_possibility": 0,
     "do_emoji_threshold_reply": true,
     "emoji_threshold_reply_possibility": 0.02,
     "set_reply_possibility": 0,
-    "palindrome_reply_possibility": 0.1,
-    "palindrome_left_possibility": 0.5,
+    "palindrome_reply_possibility": 0.01,
+    "palindrome_left_possibility": 0.015,
     "palindrome_headers": [
         "！？",
         "？！",
         "，，"
-    ]
+    ],
+    "sym_image": true
 }
